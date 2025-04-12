@@ -138,8 +138,8 @@ export default function Home() {
       </section>
 
       {/* Services Preview */}
-      <section className="py-20 px-4 bg-white relative overflow-hidden">
-        <div className="container mx-auto relative z-10">
+      <section className="py-20 lg:px-4 xs:px-2 bg-white relative overflow-hidden">
+        <div className="lg:px-4 mx-auto relative z-10">
           <div className="flex flex-col md:flex-row md:items-end justify-between mb-12">
             <div>
               <Badge className="mb-2 bg-pink-100 text-pink-500 hover:bg-pink-200">Our Services</Badge>
@@ -182,7 +182,7 @@ export default function Home() {
 
       {/* Gallery Preview */}
       <section className="py-20 px-4 bg-gray-50 relative overflow-hidden">
-        <div className="container mx-auto relative z-10">
+        <div className="lg:px-4 mx-auto relative z-10">
           <div className="text-center mb-12">
             <Badge className="mb-2 bg-pink-100 text-pink-500 hover:bg-pink-200">Our Work</Badge>
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Stunning Results</h2>
@@ -297,7 +297,7 @@ export default function Home() {
 
       {/* Testimonials */}
       <section className="py-20 px-4 bg-white">
-        <div className="container mx-auto">
+        <div className="lg:px-4 mx-auto">
           <div className="text-center mb-12">
             <Badge className="mb-2 bg-pink-100 text-pink-500 hover:bg-pink-200">Testimonials</Badge>
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">What Our Clients Say</h2>
@@ -315,7 +315,7 @@ export default function Home() {
       <section className="py-20 px-4 bg-gradient-to-br from-pink-400 to-pink-600 relative overflow-hidden">
         <div className="absolute inset-0 opacity-10 mix-blend-overlay bg-[url('/placeholder.svg?height=200&width=200')] bg-repeat"></div>
 
-        <div className="container mx-auto relative z-10">
+        <div className="lg:px-4 mx-auto relative z-10">
           <div className="max-w-4xl mx-auto bg-white/10 backdrop-blur-sm rounded-3xl p-8 md:p-12 text-center">
             <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">Ready to Transform Your Look?</h2>
             <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto">
@@ -344,7 +344,7 @@ export default function Home() {
 
       {/* Social Media Section */}
       <section className="py-20 px-4 bg-gray-50">
-        <div className="container mx-auto">
+        <div className="lg:px-4 mx-auto">
           <div className="text-center mb-12">
             <Badge className="mb-2 bg-pink-100 text-pink-500 hover:bg-pink-200">Connect With Us</Badge>
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Follow Us on Social Media</h2>

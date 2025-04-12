@@ -34,10 +34,10 @@ export default function BookingPage() {
   const [selectedNailShape, setSelectedNailShape] = useState<string | null>(null)
   const [selectedNailDesign, setSelectedNailDesign] = useState<string | null>(null)
   const [referenceImage, setReferenceImage] = useState<string | null>(null)
-  const [isPaymentComplete, setIsPaymentComplete] = useState(false)
   const [isBookingComplete, setIsBookingComplete] = useState(false)
   const [tattooLocation, setTattooLocation] = useState<string | null>(null)
   const [tattooSize, setTattooSize] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const services = [
@@ -86,10 +86,70 @@ export default function BookingPage() {
     { id: "rhinestones", name: "Rhinestones" },
   ]
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // In a real app, you would send this data to your backend
-    setIsBookingComplete(true)
+    setIsSubmitting(true)
+    try {
+      // Collect all booking details
+      const bookingDetails = {
+        service: services.find((s) => s.id === selectedService)?.name || '',
+        date: date?.toLocaleDateString() || '',
+        time: selectedTime || '',
+        nailShape: selectedService === "nails" ? nailShapes.find((s) => s.id === selectedNailShape)?.name : '',
+        nailDesign: selectedService === "nails" ? nailDesigns.find((d) => d.id === selectedNailDesign)?.name : '',
+        tattooLocation: selectedService === "tattoo" ? tattooLocation : '',
+        tattooSize: selectedService === "tattoo" ? tattooSize : '',
+        referenceImage: referenceImage || '',
+        customer: {
+          name: (document.getElementById('name') as HTMLInputElement)?.value || '',
+          email: (document.getElementById('email') as HTMLInputElement)?.value || '',
+          phone: (document.getElementById('phone') as HTMLInputElement)?.value || '',
+          notes: (document.getElementById('notes') as HTMLTextAreaElement)?.value || ''
+        },
+        location: "15 Osolo Way Off 7&8 bus stop, Ajao estate, Lagos, Nigeria",
+        contact: {
+          email: "nwabuezemercy2@gmail.com",
+          phone: "+234 916 076 3206"
+        },
+        preparation: [
+          "Please arrive 15 minutes early for your appointment",
+          "Avoid wearing nail polish on the day of your appointment",
+          "Bring any reference images you would like to show",
+          "Feel free to bring your own nail art inspiration"
+        ]
+      }
+
+      // Send booking details to API for confirmation
+      const response = await fetch('/api/booking/confirm', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(bookingDetails),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.details || 'Failed to confirm booking')
+      }
+
+      // Pass booking details to success page using URL search params
+      const searchParams = new URLSearchParams()
+      Object.entries(bookingDetails).forEach(([key, value]) => {
+        if (value) {
+          searchParams.set(key, typeof value === 'object' ? JSON.stringify(value) : value.toString())
+        }
+      })
+      
+      // Redirect to success page with booking details
+      window.location.href = `/booking/success?${searchParams.toString()}`
+    } catch (error) {
+      console.error('Booking failed:', error)
+      alert(error instanceof Error ? error.message : 'An error occurred while booking. Please try again later.')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const nextStep = () => {
@@ -120,24 +180,6 @@ export default function BookingPage() {
     }
   }
 
-  const simulatePayment = () => {
-    // In a real app, this would integrate with a payment gateway
-    setIsPaymentComplete(true)
-    nextStep()
-  }
-
-  const getServicePrice = () => {
-    const service = services.find((s) => s.id === selectedService)
-    if (!service) return "0"
-    return service.price.replace("$", "").replace("+", "")
-  }
-
-  const calculateDeposit = () => {
-    const price = Number.parseInt(getServicePrice())
-    return Math.round(price * 0.5)
-  }
-
-  // If booking is complete, show confirmation page
   if (isBookingComplete) {
     return (
       <main className="min-h-screen py-16 px-4">
@@ -155,7 +197,9 @@ export default function BookingPage() {
               <h2 className="font-bold text-pink-500 mb-4 text-xl">Appointment Details</h2>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <p className="text-gray-600">Service:</p>
-                <p className="font-medium">{services.find((s) => s.id === selectedService)?.name}</p>
+                <p className="font-medium">
+                  {services.find((s) => s.id === selectedService)?.name}
+                </p>
 
                 <p className="text-gray-600">Date:</p>
                 <p className="font-medium">{date?.toLocaleDateString()}</p>
@@ -166,14 +210,18 @@ export default function BookingPage() {
                 {selectedService === "nails" && selectedNailShape && (
                   <>
                     <p className="text-gray-600">Nail Shape:</p>
-                    <p className="font-medium">{nailShapes.find((s) => s.id === selectedNailShape)?.name}</p>
+                    <p className="font-medium">
+                      {nailShapes.find((s) => s.id === selectedNailShape)?.name}
+                    </p>
                   </>
                 )}
 
                 {selectedService === "nails" && selectedNailDesign && (
                   <>
                     <p className="text-gray-600">Nail Design:</p>
-                    <p className="font-medium">{nailDesigns.find((d) => d.id === selectedNailDesign)?.name}</p>
+                    <p className="font-medium">
+                      {nailDesigns.find((d) => d.id === selectedNailDesign)?.name}
+                    </p>
                   </>
                 )}
 
@@ -190,9 +238,6 @@ export default function BookingPage() {
                     <p className="font-medium">{tattooSize}</p>
                   </>
                 )}
-
-                <p className="text-gray-600">Payment Status:</p>
-                <p className="font-medium text-green-600">50% Deposit Paid</p>
               </div>
             </div>
 
@@ -241,7 +286,7 @@ export default function BookingPage() {
 
         <div className="mb-8">
           <div className="flex justify-between items-center mb-6">
-            {[1, 2, 3, 4, 5].map((i) => (
+            {[1, 2, 3, 4].map((i) => (
               <div
                 key={i}
                 className={`flex items-center ${i < step ? "text-pink-500" : i === step ? "text-pink-500" : "text-gray-400"}`}
@@ -343,7 +388,9 @@ export default function BookingPage() {
                       <div
                         key={time}
                         className={`border rounded-lg p-3 text-center cursor-pointer transition-all ${
-                          selectedTime === time ? "border-pink-500 bg-pink-50" : "border-gray-200 hover:border-pink-300"
+                          selectedTime === time
+                            ? "border-pink-500 bg-pink-50"
+                            : "border-gray-200 hover:border-pink-300"
                         }`}
                         onClick={() => setSelectedTime(time)}
                       >
@@ -648,85 +695,13 @@ export default function BookingPage() {
                 <Button type="button" variant="outline" onClick={prevStep} className="border-pink-500 text-pink-500">
                   Back
                 </Button>
-                <Button type="button" onClick={nextStep} className="bg-pink-500 hover:bg-pink-600">
-                  Proceed to Payment <ChevronRight className="ml-2 h-4 w-4" />
+                <Button
+                  type="submit"
+                  className="bg-pink-500 hover:bg-pink-600"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? 'Booking...' : 'Complete Booking'}
                 </Button>
-              </div>
-            </div>
-          )}
-
-          {step === 5 && (
-            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-              <h2 className="text-2xl font-bold text-pink-500 mb-6">Payment</h2>
-
-              <div className="mb-8">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Booking Summary</CardTitle>
-                    <CardDescription>Review your appointment details</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">{services.find((s) => s.id === selectedService)?.name}</span>
-                        <span className="font-medium">{services.find((s) => s.id === selectedService)?.price}</span>
-                      </div>
-
-                      <div className="border-t pt-4">
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Total</span>
-                          <span className="font-medium">${getServicePrice()}</span>
-                        </div>
-                        <div className="flex justify-between text-pink-500 font-medium">
-                          <span>Required Deposit (50%)</span>
-                          <span>${calculateDeposit()}</span>
-                        </div>
-                        <p className="text-xs text-gray-500 mt-2">
-                          The remaining balance will be paid at the time of your appointment.
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                  <CardFooter className="flex-col space-y-4">
-                    <div className="w-full">
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button className="w-full bg-pink-500 hover:bg-pink-600">
-                            Pay Deposit (${calculateDeposit()})
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Payment Simulation</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              In a real application, this would connect to a payment gateway. For this demo, we'll
-                              simulate a successful payment.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={simulatePayment}>Simulate Payment</AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-
-                    <div className="text-center text-sm text-gray-500">
-                      <p>Secure payment powered by Stripe</p>
-                    </div>
-                  </CardFooter>
-                </Card>
-              </div>
-
-              <div className="flex justify-between">
-                <Button type="button" variant="outline" onClick={prevStep} className="border-pink-500 text-pink-500">
-                  Back
-                </Button>
-                {isPaymentComplete && (
-                  <Button type="submit" className="bg-pink-500 hover:bg-pink-600">
-                    Complete Booking
-                  </Button>
-                )}
               </div>
             </div>
           )}

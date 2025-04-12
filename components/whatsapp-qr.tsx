@@ -3,12 +3,12 @@ import Image from "next/image"
 export default function WhatsAppQR() {
   return (
     <div className="flex flex-col items-center">
-      <div className="border border-gray-200 rounded-lg p-2 bg-white shadow-md">
+      <div className="border border-gray-200 rounded-lg bg-white shadow-md">
         <Image
-          src="/placeholder.svg?height=150&width=150&text=WhatsApp+QR"
+          src="/images/Whatsapp_qrcode.png?height=150&width=150&text=WhatsApp+QR"
           alt="WhatsApp QR Code"
-          width={150}
-          height={150}
+          width={200}
+          height={200}
           className="mx-auto"
         />
       </div>

@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Calendar } from "@/components/ui/calendar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -30,7 +30,7 @@ export default function BookingPage() {
   const [date, setDate] = useState<Date | undefined>(undefined)
   const [step, setStep] = useState(1)
   const [selectedService, setSelectedService] = useState<string | null>(null)
-  const [selectedTime, setSelectedTime] = useState<string | null>(null)
+  const [selectedTime, setSelectedTime] = useState<string>('')
   const [selectedNailShape, setSelectedNailShape] = useState<string | null>(null)
   const [selectedNailDesign, setSelectedNailDesign] = useState<string | null>(null)
   const [referenceImage, setReferenceImage] = useState<string | null>(null)
@@ -38,6 +38,8 @@ export default function BookingPage() {
   const [tattooLocation, setTattooLocation] = useState<string | null>(null)
   const [tattooSize, setTattooSize] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [availableTimeSlots, setAvailableTimeSlots] = useState<{ time: string; isAvailable: boolean }[]>([])
+  const [timeSlotsError, setTimeSlotsError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const services = [
@@ -51,21 +53,6 @@ export default function BookingPage() {
     { id: "brow", name: "Brow Trimming", price: "$20+" },
     { id: "hair", name: "Hair Revamping", price: "$70+" },
     { id: "tattoo", name: "Tattoo", price: "$150+" },
-  ]
-
-  const timeSlots = [
-    "9:00 AM",
-    "10:00 AM",
-    "11:00 AM",
-    "12:00 PM",
-    "1:00 PM",
-    "2:00 PM",
-    "3:00 PM",
-    "4:00 PM",
-    "5:00 PM",
-    "6:00 PM",
-    "7:00 PM",
-    "8:00 PM",
   ]
 
   const nailShapes = [
@@ -86,67 +73,89 @@ export default function BookingPage() {
     { id: "rhinestones", name: "Rhinestones" },
   ]
 
+  useEffect(() => {
+    const fetchAvailableTimeSlots = async () => {
+      try {
+        if (!date) {
+          setTimeSlotsError('Please select a date first');
+          setAvailableTimeSlots([]);
+          return;
+        }
+
+        const response = await fetch(`/api/booking/available-time-slots?date=${date.toISOString()}`);
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to fetch available time slots');
+        }
+
+        setAvailableTimeSlots(data.timeSlots || []);
+        setTimeSlotsError(null);
+      } catch (error) {
+        console.error('Error fetching available time slots:', error);
+        setTimeSlotsError(error instanceof Error ? error.message : 'Failed to fetch time slots');
+        setAvailableTimeSlots([]);
+      }
+    };
+
+    fetchAvailableTimeSlots();
+  }, [date]);
+
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsSubmitting(true)
+    e.preventDefault();
+    setIsSubmitting(true);
     try {
-      // Collect all booking details
-      const bookingDetails = {
-        service: services.find((s) => s.id === selectedService)?.name || '',
-        date: date?.toLocaleDateString() || '',
-        time: selectedTime || '',
-        nailShape: selectedService === "nails" ? nailShapes.find((s) => s.id === selectedNailShape)?.name : '',
-        nailDesign: selectedService === "nails" ? nailDesigns.find((d) => d.id === selectedNailDesign)?.name : '',
-        tattooLocation: selectedService === "tattoo" ? tattooLocation : '',
-        tattooSize: selectedService === "tattoo" ? tattooSize : '',
-        referenceImage: referenceImage || '',
-        customer: {
-          name: (document.getElementById('name') as HTMLInputElement)?.value || '',
-          email: (document.getElementById('email') as HTMLInputElement)?.value || '',
-          phone: (document.getElementById('phone') as HTMLInputElement)?.value || '',
-          notes: (document.getElementById('notes') as HTMLTextAreaElement)?.value || ''
-        },
-        location: "15 Osolo Way Off 7&8 bus stop, Ajao estate, Lagos, Nigeria",
-        contact: {
-          email: "nwabuezemercy2@gmail.com",
-          phone: "+234 916 076 3206"
-        },
-        preparation: [
-          "Please arrive 15 minutes early for your appointment",
-          "Avoid wearing nail polish on the day of your appointment",
-          "Bring any reference images you would like to show",
-          "Feel free to bring your own nail art inspiration"
-        ]
+      if (!selectedService || !date || !selectedTime) {
+        throw new Error('Please select service, date, and time');
       }
 
-      // Send booking details to API for confirmation
+      const customerName = (document.getElementById('name') as HTMLInputElement)?.value || '';
+      const customerEmail = (document.getElementById('email') as HTMLInputElement)?.value || '';
+      const customerPhone = (document.getElementById('phone') as HTMLInputElement)?.value || '';
+      const customerNotes = (document.getElementById('notes') as HTMLTextAreaElement)?.value || '';
+
       const response = await fetch('/api/booking/confirm', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(bookingDetails),
-      })
+        body: JSON.stringify({
+          service: selectedService,
+          date: date?.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+          }),
+          time: selectedTime,
+          name: customerName,
+          email: customerEmail,
+          phone: customerPhone,
+          notes: customerNotes,
+          nailShape: selectedNailShape || '',
+          nailDesign: selectedNailDesign || '',
+          tattooLocation: tattooLocation || '',
+          tattooSize: tattooSize || '',
+          referenceImage: referenceImage || ''
+        }),
+      });
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.details || 'Failed to confirm booking')
+        throw new Error(data.error || 'Failed to confirm booking');
       }
 
       // Pass booking details to success page using URL search params
-      const searchParams = new URLSearchParams()
-      Object.entries(bookingDetails).forEach(([key, value]) => {
-        if (value) {
-          searchParams.set(key, typeof value === 'object' ? JSON.stringify(value) : value.toString())
-        }
-      })
+      const url = new URL('/booking/success', window.location.origin);
+      url.searchParams.set('appointmentId', data.appointmentId);
+      url.searchParams.set('service', selectedService);
+      url.searchParams.set('date', date?.toLocaleDateString());
+      url.searchParams.set('time', selectedTime);
       
-      // Redirect to success page with booking details
-      window.location.href = `/booking/success?${searchParams.toString()}`
+      window.location.href = url.toString();
     } catch (error) {
-      console.error('Booking failed:', error)
-      alert(error instanceof Error ? error.message : 'An error occurred while booking. Please try again later.')
+      console.error('Error:', error);
+      alert(error instanceof Error ? error.message : 'Failed to confirm booking');
     } finally {
       setIsSubmitting(false)
     }
@@ -179,6 +188,42 @@ export default function BookingPage() {
       fileInputRef.current.value = ""
     }
   }
+
+  const handleCancel = async () => {
+    if (!window.confirm('Are you sure you want to cancel this appointment?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/booking/cancel', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ appointmentId: '12345' }), // Replace with actual appointment ID
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.details || 'Failed to cancel booking');
+      }
+
+      alert('Appointment cancelled successfully');
+      window.location.href = '/booking/cancelled';
+    } catch (error) {
+      console.error('Cancellation failed:', error);
+      alert(error instanceof Error ? error.message : 'An error occurred while cancelling. Please try again later.');
+    }
+  };
+
+  const handleTimeSlotClick = (time: string, isAvailable: boolean) => {
+    if (isAvailable) {
+      setSelectedTime(time);
+    } else {
+      alert('This time slot is already booked');
+    }
+  };
 
   if (isBookingComplete) {
     return (
@@ -384,19 +429,32 @@ export default function BookingPage() {
                 <div>
                   <h3 className="font-medium mb-4">Select a Time</h3>
                   <div className="grid grid-cols-2 gap-2">
-                    {timeSlots.map((time) => (
-                      <div
-                        key={time}
-                        className={`border rounded-lg p-3 text-center cursor-pointer transition-all ${
-                          selectedTime === time
-                            ? "border-pink-500 bg-pink-50"
-                            : "border-gray-200 hover:border-pink-300"
-                        }`}
-                        onClick={() => setSelectedTime(time)}
-                      >
-                        {time}
-                      </div>
-                    ))}
+                    {timeSlotsError ? (
+                      <div className="col-span-2 text-red-500 text-center">{timeSlotsError}</div>
+                    ) : (
+                      availableTimeSlots.map((slot) => (
+                        <div
+                          key={slot.time}
+                          className={`border rounded-lg p-3 text-center cursor-pointer transition-all relative ${
+                            selectedTime === slot.time
+                              ? 'border-pink-500 bg-pink-50 text-pink-600'
+                              : slot.isAvailable 
+                                ? 'hover:bg-gray-50'
+                                : 'bg-gray-200 cursor-not-allowed'
+                          } ${
+                            !slot.isAvailable &&
+                            'opacity-75 filter blur-sm'
+                          }`}
+                          onClick={() => handleTimeSlotClick(slot.time, slot.isAvailable)}
+                          style={{
+                            pointerEvents: !slot.isAvailable ? 'none' : 'auto'
+                          }}
+                          title={slot.isAvailable ? undefined : 'This time slot is already booked'}
+                        >
+                          {slot.time.split(":")[0].padStart(2, "0")}:{slot.time.split(":")[1].padStart(2, "0")}
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
               </div>
@@ -708,5 +766,5 @@ export default function BookingPage() {
         </form>
       </div>
     </main>
-  )
+  );
 }

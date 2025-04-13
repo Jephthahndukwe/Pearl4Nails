@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Check, CalendarPlus, Share2, ExternalLink, MapPin, Mail, Phone, Clock, Info, AlertCircle, Trash2 } from "lucide-react"
+import { Check, CalendarPlus, Share2, ExternalLink, MapPin, Mail, Phone, Clock, Info, AlertCircle, Trash2, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { CalendarEvent } from "@/types/calendar"
@@ -18,51 +18,93 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { useRouter } from 'next/navigation';
 
 export default function BookingSuccessPage() {
-  const [isSharing, setIsSharing] = useState(false)
-  const [isAddingToCalendar, setIsAddingToCalendar] = useState(false)
-  const [isCancelling, setIsCancelling] = useState(false)
-  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false)
+  const [bookingDetails, setBookingDetails] = useState(null);
+  const [isSharing, setIsSharing] = useState(false);
+  const [isAddingToCalendar, setIsAddingToCalendar] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
 
-  // Get booking details from URL parameters
-  const bookingDetails = {
-    service: typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('service') : undefined,
-    date: typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('date') : undefined,
-    time: typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('time') : undefined,
-    nailShape: typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('nailShape') : undefined,
-    nailDesign: typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('nailDesign') : undefined,
-    tattooLocation: typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('tattooLocation') : undefined,
-    tattooSize: typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('tattooSize') : undefined,
-    referenceImage: typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('referenceImage') : undefined,
-    customer: {
-      name: typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('customer.name') : undefined,
-      email: typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('customer.email') : undefined,
-      phone: typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('customer.phone') : undefined,
-      notes: typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('customer.notes') : undefined
-    },
-    location: "15 Osolo Way Off 7&8 bus stop, Ajao estate, Lagos, Nigeria",
-    contact: {
-      email: "nwabuezemercy2@gmail.com",
-      phone: "+234 916 076 3206"
-    },
-    preparation: [
-      "Please arrive 15 minutes early for your appointment",
-      "Avoid wearing nail polish on the day of your appointment",
-      "Bring any reference images you would like to show",
-      "Feel free to bring your own nail art inspiration"
-    ]
-  }
-
-  // Redirect if user tries to access success page without booking
   useEffect(() => {
-    if (!bookingDetails.service || !bookingDetails.date || !bookingDetails.time) {
-      toast.error("Please book an appointment first")
-      setTimeout(() => {
-        window.location.href = '/booking'
-      }, 1000)
+    // Check if appointment ID exists in URL
+    const searchParams = new URLSearchParams(window.location.search);
+    const appointmentId = searchParams.get('appointmentId');
+
+    if (!appointmentId) {
+      // Redirect to home if no appointment ID
+      router.push('/');
+      return;
     }
-  }, [])
+
+    // Get booking details from URL parameters
+    const service = searchParams.get('service');
+    
+    const preparation = service === 'nails' 
+      ? [
+          "Please arrive 15 minutes early for your appointment",
+          "Make sure your nails are clean and dry",
+          "Avoid wearing nail polish if you have natural nails",
+          "Bring any reference images you would like to show"
+        ]
+      : service === 'tattoo'
+      ? [
+          "Please arrive 15 minutes early for your appointment",
+          "Make sure the area is clean and shaved if necessary",
+          "Avoid wearing tight clothing over the tattoo area",
+          "Bring any reference images you would like to show"
+        ]
+      : [
+          "Please arrive 15 minutes early for your appointment",
+          "Make sure you're comfortable with the service",
+          "Feel free to bring any reference images you would like to show"
+        ];
+
+    const details = {
+      service: searchParams.get('service'),
+      date: searchParams.get('date'),
+      time: searchParams.get('time'),
+      nailShape: searchParams.get('nailShape'),
+      nailDesign: searchParams.get('nailDesign'),
+      tattooLocation: searchParams.get('tattooLocation'),
+      tattooSize: searchParams.get('tattooSize'),
+      referenceImage: searchParams.get('referenceImage'),
+      customer: {
+        name: searchParams.get('customer.name'),
+        email: searchParams.get('customer.email'),
+        phone: searchParams.get('customer.phone'),
+        notes: searchParams.get('customer.notes')
+      },
+      location: "15 Osolo Way Off 7&8 bus stop, Ajao estate, Lagos, Nigeria",
+      contact: {
+        email: searchParams.get('contact.email'),
+        phone: searchParams.get('contact.phone')
+      },
+      preparation,
+      appointmentId
+    };
+
+    setBookingDetails(details);
+
+    // Redirect if user tries to access success page without booking
+    if (!details.service || !details.date || !details.time || !details.appointmentId) {
+      router.push('/');
+    }
+  }, [router]);
+
+  if (!bookingDetails) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-pink-500" />
+          <p className="text-gray-600">Loading your appointment details...</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleAddToCalendar = async () => {
     setIsAddingToCalendar(true)
@@ -115,32 +157,43 @@ export default function BookingSuccessPage() {
     }
   }
 
-  const handleCancel = async () => {
-    setIsCancelModalOpen(true)
-  }
+  const handleCancel = () => {
+    setIsCancelModalOpen(true);
+  };
 
-  const handleConfirmCancel = async () => {
-    setIsCancelling(true)
+  const handleCancelAppointment = async () => {
     try {
-      // In a real app, you would make an API call to cancel the appointment
-      // For now, we'll just show a success message
-      
-      // Redirect to cancelled page after a short delay
-      setTimeout(() => {
-        window.location.href = '/booking/cancelled'
-      }, 1000)
+      setIsLoading(true);
+      setIsCancelModalOpen(false);
+
+      const response = await fetch('/api/booking/cancel', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ appointmentId: bookingDetails.appointmentId }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Redirect to cancelled page
+        window.location.href = data.redirectUrl;
+      } else {
+        throw new Error(data.error);
+      }
     } catch (error) {
-      console.error('Error cancelling:', error)
-      toast.error("Failed to cancel appointment")
+      console.error('Error cancelling appointment:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to cancel appointment');
     } finally {
-      setIsCancelling(false)
-      setIsCancelModalOpen(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
     <main className="min-h-screen py-16 px-4">
       <div className="max-w-4xl mx-auto">
+        
         <div className="bg-white rounded-xl p-8 shadow-md border border-gray-100">
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
@@ -162,11 +215,35 @@ export default function BookingSuccessPage() {
               <p className="text-gray-600">Time:</p>
               <p className="font-medium">{bookingDetails.time}</p>
 
-              <p className="text-gray-600">Nail Shape:</p>
-              <p className="font-medium">{bookingDetails.nailShape}</p>
+              {/* Show nail details only for nail services */}
+              {bookingDetails.service === 'nails' && (
+                <>
+                  <p className="text-gray-600">Nail Shape:</p>
+                  <p className="font-medium">{bookingDetails.nailShape}</p>
 
-              <p className="text-gray-600">Nail Design:</p>
-              <p className="font-medium">{bookingDetails.nailDesign}</p>
+                  <p className="text-gray-600">Nail Design:</p>
+                  <p className="font-medium">{bookingDetails.nailDesign}</p>
+                </>
+              )}
+
+              {/* Show tattoo details only for tattoo services */}
+              {bookingDetails.service === 'tattoo' && (
+                <>
+                  <p className="text-gray-600">Tattoo Location:</p>
+                  <p className="font-medium">{bookingDetails.tattooLocation}</p>
+
+                  <p className="text-gray-600">Tattoo Size:</p>
+                  <p className="font-medium">{bookingDetails.tattooSize}</p>
+                </>
+              )}
+
+              {/* Show reference image if available */}
+              {bookingDetails.referenceImage && (
+                <>
+                  <p className="text-gray-600">Reference Image:</p>
+                  <p className="font-medium">{bookingDetails.referenceImage}</p>
+                </>
+              )}
             </div>
           </div>
 
@@ -365,8 +442,8 @@ export default function BookingSuccessPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmCancel} disabled={isCancelling}>
-              {isCancelling ? 'Cancelling...' : 'Confirm Cancellation'}
+            <AlertDialogAction onClick={handleCancelAppointment} disabled={isLoading}>
+              {isLoading ? 'Cancelling...' : 'Confirm Cancellation'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

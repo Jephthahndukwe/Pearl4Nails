@@ -73,32 +73,100 @@ export default function BookingPage() {
     { id: "Rhinestones", name: "Rhinestones" },
   ]
 
+  // Default time slots fallback for client-side when API fails
+  const getDefaultTimeSlots = (selectedDate: Date) => {
+    const dayOfWeek = selectedDate.getDay(); // 0 for Sunday, 1 for Monday, etc.
+    
+    // Default business hours (9am to 8pm)
+    const allTimeSlots = [
+      '09:00 AM', '10:00 AM', '11:00 AM', '12:00 PM',
+      '01:00 PM', '02:00 PM', '03:00 PM', '04:00 PM',
+      '05:00 PM', '06:00 PM', '07:00 PM', '08:00 PM'
+    ];
+
+    // Generate some random availability for fallback use
+    return allTimeSlots.map(time => ({
+      time,
+      // Make some slots unavailable based on day of week as a pattern
+      isAvailable: !(dayOfWeek === 0 && ['09:00 AM', '10:00 AM'].includes(time)) && 
+                   !(dayOfWeek === 1 && ['07:00 PM', '08:00 PM'].includes(time)) &&
+                   !(Math.random() > 0.8) // Randomly make ~20% of slots unavailable
+    }));
+  };
+
   useEffect(() => {
+    let isMounted = true;
     const fetchAvailableTimeSlots = async () => {
       try {
         if (!date) {
-          setTimeSlotsError('Please select a date first');
-          setAvailableTimeSlots([]);
+          if (isMounted) {
+            setTimeSlotsError('Please select a date first');
+            setAvailableTimeSlots([]);
+          }
           return;
         }
 
-        const response = await fetch(`/api/booking/available-time-slots?date=${date.toISOString()}`);
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.error || 'Failed to fetch available time slots');
+        // Set a timeout for the fetch request
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
+        
+        try {
+          const response = await fetch(`/api/booking/available-time-slots?date=${date.toISOString()}`, {
+            signal: controller.signal
+          });
+          clearTimeout(timeoutId);
+          
+          if (!response.ok) {
+            const data = await response.json().catch(() => ({ error: 'Invalid response from server' }));
+            throw new Error(data.error || 'Failed to fetch available time slots');
+          }
+          
+          const data = await response.json();
+          
+          // Check if we received the notice property which indicates fallback data
+          if (data.notice) {
+            console.warn('Using fallback time slots from API:', data.notice);
+          }
+          
+          if (isMounted) {
+            setAvailableTimeSlots(data.timeSlots || []);
+            setTimeSlotsError(data.notice || null);
+          }
+        } catch (fetchError) {
+          clearTimeout(timeoutId);
+          console.error('Fetch error:', fetchError);
+          
+          // If we get an AbortError or any other fetch error, use client-side fallback
+          if (isMounted) {
+            console.warn('Using client-side fallback time slots');
+            // Make sure date is defined before calling getDefaultTimeSlots
+            if (date) {
+              const fallbackSlots = getDefaultTimeSlots(date);
+              setAvailableTimeSlots(fallbackSlots);
+              setTimeSlotsError('Using estimated availability. Please contact us to confirm your booking.');
+            }
+          }
         }
-
-        setAvailableTimeSlots(data.timeSlots || []);
-        setTimeSlotsError(null);
       } catch (error) {
-        console.error('Error fetching available time slots:', error);
-        setTimeSlotsError(error instanceof Error ? error.message : 'Failed to fetch time slots');
-        setAvailableTimeSlots([]);
+        if (isMounted) {
+          console.error('Error in time slot fetch effect:', error);
+          if (date) {
+            const fallbackSlots = getDefaultTimeSlots(date);
+            setAvailableTimeSlots(fallbackSlots);
+            setTimeSlotsError('Using estimated availability. Please contact us to confirm your booking.');
+          } else {
+            setAvailableTimeSlots([]);
+            setTimeSlotsError('Please select a date first');
+          }
+        }
       }
     };
 
     fetchAvailableTimeSlots();
+    
+    return () => {
+      isMounted = false;
+    };
   }, [date]);
 
   const handleSubmit = async (e: React.FormEvent) => {

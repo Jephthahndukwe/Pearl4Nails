@@ -18,14 +18,24 @@ export async function createAppointment(appointmentData: any): Promise<any> {
     
     console.log('Original date:', appointmentData.date);
     console.log('Formatted date:', formattedDate);
+    
+    // Store multiple date formats to ensure compatibility between environments
+    const dateFormats = {
+      standard: formattedDate,                           // MM/DD/YYYY
+      iso: dateObj.toISOString().split('T')[0],         // YYYY-MM-DD
+      dash: `${month}-${day}-${year}`,                  // MM-DD-YYYY
+      ymd: `${year}-${month}-${day}`                    // YYYY-MM-DD (alt format)
+    };
 
-    // Create the appointment
+    // Create the appointment with multiple date formats for cross-environment compatibility
     const appointment = {
       ...appointmentData,
-      date: formattedDate,
+      date: formattedDate,              // Primary date format (MM/DD/YYYY)
+      dateFormats: dateFormats,         // Store all formats to ensure we can find it later
       status: 'confirmed',
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
+      environment: process.env.NODE_ENV || 'unknown'
     };
 
     // Insert the appointment
@@ -163,7 +173,7 @@ export async function getAvailableTimeSlots(date: string): Promise<{ time: strin
     const collection = await getAppointmentCollection();
 
     // First get all booked time slots for the date
-    // Try multiple date formats to handle potential format inconsistencies between environments
+    // Use a comprehensive query that works with all date formats and structures
     
     // Create different possible date formats to query with
     const possibleDateFormats = [
@@ -176,17 +186,27 @@ export async function getAvailableTimeSlots(date: string): Promise<{ time: strin
     
     console.log(`[${process.env.NODE_ENV}] Searching for appointments with possible date formats:`, possibleDateFormats);
     
+    // Build a comprehensive query that checks all possible date locations
     const bookedAppointments = await collection.find({
       $or: [
+        // Check the primary date field
         { date: { $in: possibleDateFormats } },
+        
+        // Check inside dateFormats structure (for newer appointments)
+        { 'dateFormats.standard': formattedDate },
+        { 'dateFormats.iso': dateParamObj.toISOString().split('T')[0] },
+        { 'dateFormats.dash': `${month}-${day}-${year}` },
+        { 'dateFormats.ymd': `${year}-${month}-${day}` },
+        
         // If the date is stored as a Date object in MongoDB
-        { date: { $gte: new Date(new Date(formattedDate).setHours(0,0,0,0)), $lt: new Date(new Date(formattedDate).setHours(23,59,59,999)) } }
+        { date: { $gte: new Date(new Date(formattedDate).setHours(0,0,0,0)), 
+                 $lt: new Date(new Date(formattedDate).setHours(23,59,59,999)) } }
       ],
       status: { $in: ['confirmed', 'pending'] }
     }).toArray();
 
     console.log(`[${process.env.NODE_ENV}] Booked appointments found:`, bookedAppointments.length);
-    console.log('Booked appointment times:', bookedAppointments.map((a: any) => a.time));
+    console.log('Booked appointment times:', bookedAppointments.map((appointment: any) => appointment.time));
 
     // Get all possible time slots (9am to 8pm)
     const allTimeSlots = [

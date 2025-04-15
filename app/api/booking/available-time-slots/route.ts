@@ -52,8 +52,20 @@ export async function GET(request: Request) {
       });
       
       // Try to get actual time slots with a timeout
+      // Add log for debugging date format issues
+      console.log(`Requesting time slots with formattedDate: ${formattedDate} (original date: ${date})`);
+      
+      // Ensure we're passing the correct date format consistently
       const availableTimeSlotsPromise = getAvailableTimeSlots(formattedDate);
       const availableTimeSlots = await Promise.race([availableTimeSlotsPromise, timeoutPromise]) as any;
+      
+      // Log what we got back to help with debugging
+      console.log(`Available time slots result contains ${availableTimeSlots.length} slots`);
+      if (availableTimeSlots.length > 0) {
+        const bookedSlots = availableTimeSlots.filter((slot: { isAvailable: boolean }) => !slot.isAvailable)
+          .map((slot: { time: string }) => slot.time);
+        console.log(`Found ${bookedSlots.length} booked slots: ${bookedSlots.join(', ')}`);
+      }
       
       // Add debug information in response but only in development
       const responseObj = { 
@@ -64,8 +76,9 @@ export async function GET(request: Request) {
       };
       
       // Include date format info for debugging
+      const fullResponseObj: any = responseObj;
       if (process.env.NODE_ENV === 'development') {
-        responseObj.debug = {
+        fullResponseObj.debug = {
           requestedDate: date,
           formattedDate: formattedDate,
           requestUrl: request.url

@@ -111,9 +111,16 @@ export default function BookingPage() {
           setTimeSlotsError('Loading available time slots...');
         }
 
-        // Set a timeout for the fetch request
+        // Set a timeout for the fetch request with proper error handling
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout for production
+        const timeoutId = setTimeout(() => {
+          try {
+            controller.abort('Timeout exceeded'); // Add a reason for the abort
+          } catch (e) {
+            // Some browsers don't support reason parameter
+            controller.abort();
+          }
+        }, 10000); // 10 second timeout
         
         try {
           // Use a cache-busting query parameter to avoid browser cache issues

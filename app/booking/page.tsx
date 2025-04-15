@@ -65,12 +65,12 @@ export default function BookingPage() {
   ]
 
   const nailDesigns = [
-    { id: "french", name: "French Tips" },
-    { id: "ombre", name: "Ombre" },
-    { id: "glitter", name: "Glitter" },
-    { id: "floral", name: "Floral" },
-    { id: "geometric", name: "Geometric" },
-    { id: "rhinestones", name: "Rhinestones" },
+    { id: "French", name: "French Tips" },
+    { id: "Ombre", name: "Ombre" },
+    { id: "Glitter", name: "Glitter" },
+    { id: "Floral", name: "Floral" },
+    { id: "Geometric", name: "Geometric" },
+    { id: "Rhinestones", name: "Rhinestones" },
   ]
 
   useEffect(() => {
@@ -145,12 +145,25 @@ export default function BookingPage() {
         throw new Error(data.error || 'Failed to confirm booking');
       }
 
-      // Pass booking details to success page using URL search params
+      // Pass only appointment and service details to success page using URL search params - no customer info
       const url = new URL('/booking/success', window.location.origin);
       url.searchParams.set('appointmentId', data.appointmentId);
       url.searchParams.set('service', selectedService);
       url.searchParams.set('date', date?.toLocaleDateString());
       url.searchParams.set('time', selectedTime);
+      
+      // Only pass service-specific details if provided
+      if (selectedService === 'nails') {
+        if (selectedNailShape) url.searchParams.set('nailShape', selectedNailShape);
+        if (selectedNailDesign) url.searchParams.set('nailDesign', selectedNailDesign);
+      }
+      
+      if (selectedService === 'tattoo') {
+        if (tattooLocation) url.searchParams.set('tattooLocation', tattooLocation);
+        if (tattooSize) url.searchParams.set('tattooSize', tattooSize);
+      }
+      
+      if (referenceImage) url.searchParams.set('referenceImage', 'yes');
       
       window.location.href = url.toString();
     } catch (error) {
@@ -536,7 +549,7 @@ export default function BookingPage() {
                           >
                             <div className="aspect-square relative mb-2">
                               <Image
-                                src={`/images/nail-designs/${design.id}.jpg`}
+                                src={`/images/${design.id}.jpeg`}
                                 alt={design.name}
                                 fill
                                 className="object-cover rounded"

@@ -56,14 +56,34 @@ export default function TrainingPage() {
 
   const [showForm, setShowForm] = useState(false)
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const handleFormSubmit = async (data: any) => {
     try {
-      // Here you would typically make an API call to submit the form data
-      // For now, we'll just redirect to the success page
-      window.location.href = '/training/success'
+      setIsSubmitting(true);
+      
+      // Make an API call to the training registration endpoint
+      const response = await fetch('/api/training/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to submit training application');
+      }
+      
+      // Redirect to the success page with the registration details
+      window.location.href = result.redirectUrl;
     } catch (error) {
-      console.error('Error submitting form:', error)
-      // Handle error (e.g., show error message to user)
+      console.error('Error submitting training form:', error);
+      alert(error instanceof Error ? error.message : 'Failed to submit training application');
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -126,6 +146,7 @@ export default function TrainingPage() {
                   <RegistrationForm
                     courses={trainingCourses}
                     onSubmit={handleFormSubmit}
+                    isSubmitting={isSubmitting}
                   />
                 </div>
               </div>

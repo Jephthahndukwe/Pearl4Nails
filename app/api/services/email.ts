@@ -1,9 +1,15 @@
-import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Create a transporter for Gmail
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASSWORD,
+  },
+});
 
 const getLogoUrl = () => {
-  // Replace with your actual logo URL
   return process.env.NEXT_PUBLIC_APP_URL + '/images/Pearl4Nails_logo.png';
 };
 
@@ -17,110 +23,46 @@ export const sendAppointmentConfirmation = async (appointment: any) => {
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Pearl4Nails Appointment Confirmation</title>
         <style>
-          @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
-          
           body {
-            font-family: 'Poppins', sans-serif;
+            font-family: Arial, sans-serif;
             line-height: 1.6;
             color: #333;
-            margin: 0;
-            padding: 0;
           }
-          
           .container {
             max-width: 600px;
             margin: 0 auto;
             padding: 20px;
             background-color: #fff;
-            box-shadow: 0 2px 15px rgba(0,0,0,0.05);
           }
-          
           .header {
             text-align: center;
-            padding: 40px 0;
+            padding: 20px 0;
             background-color: #fff5f7;
             border-bottom: 2px solid #ff69b4;
           }
-          
-          .logo {
-            max-width: 200px;
-            height: auto;
-            margin-bottom: 20px;
-          }
-          
-          .main-content {
-            padding: 30px;
-          }
-          
           .appointment-details {
             background-color: #fff5f7;
-            padding: 25px;
+            padding: 15px;
             border-radius: 8px;
-            margin: 30px 0;
+            margin: 20px 0;
           }
-          
           .details-item {
-            margin-bottom: 15px;
-            padding: 10px;
+            margin-bottom: 10px;
+            padding: 8px;
             background-color: #fff;
             border-radius: 5px;
             border-left: 4px solid #ff69b4;
-          }
-          
-          .preparation-tips {
-            background-color: #f8f9fa;
-            padding: 25px;
-            border-radius: 8px;
-            margin: 30px 0;
-          }
-          
-          .tip-item {
-            background-color: #fff;
-            padding: 15px;
-            margin: 10px 0;
-            border-radius: 5px;
-            border: 1px solid #eee;
-          }
-          
-          .footer {
-            text-align: center;
-            padding: 30px;
-            background-color: #f8f9fa;
-            border-top: 1px solid #eee;
-          }
-          
-          .footer-links {
-            margin-top: 20px;
-          }
-          
-          .footer-link {
-            display: inline-block;
-            margin: 0 10px;
-            text-decoration: none;
-            color: #ff69b4;
-            font-weight: 500;
-          }
-          
-          .social-icons {
-            margin-top: 20px;
-          }
-          
-          .social-icon {
-            display: inline-block;
-            margin: 0 10px;
-            font-size: 24px;
-            color: #666;
           }
         </style>
       </head>
       <body>
         <div class="container">
           <div class="header">
-            <img src="${getLogoUrl()}" alt="Pearl4Nails Logo" class="logo" />
-            <h1 style="color: #ff69b4; font-size: 24px; margin: 0;">Appointment Confirmation</h1>
+            <img src="${getLogoUrl()}" alt="Pearl4Nails Logo" style="max-width: 200px;" />
+            <h1 style="color: #ff69b4; font-size: 24px; margin: 10px 0;">Appointment Confirmation</h1>
           </div>
 
-          <div class="main-content">
+          <div style="padding: 20px;">
             <p>Dear ${appointment.customer.name},</p>
             <p>Thank you for booking your appointment with Pearl4Nails! We're excited to help you achieve your desired look.</p>
 
@@ -135,68 +77,37 @@ export const sendAppointmentConfirmation = async (appointment: any) => {
               <div class="details-item">
                 <strong>Time:</strong> ${appointment.time}
               </div>
-              
-              ${appointment.nailShape ? `<div class="details-item">
-                <strong>Nail Shape:</strong> ${appointment.nailShape}
-              </div>` : ''}
-              
-              ${appointment.nailDesign ? `<div class="details-item">
-                <strong>Nail Design:</strong> ${appointment.nailDesign}
-              </div>` : ''}
-              
-              ${appointment.tattooLocation ? `<div class="details-item">
-                <strong>Tattoo Location:</strong> ${appointment.tattooLocation}
-              </div>` : ''}
-              
-              ${appointment.tattooSize ? `<div class="details-item">
-                <strong>Tattoo Size:</strong> ${appointment.tattooSize}
-              </div>` : ''}
-              
-              ${appointment.specialRequests ? `<div class="details-item">
-                <strong>Special Requests:</strong> ${appointment.specialRequests}
-              </div>` : ''}
+              <div class="details-item">
+                <strong>Location:</strong> ${appointment.location}
+              </div>
             </div>
 
-            <div class="preparation-tips">
-              <h3 style="color: #ff69b4; margin: 0 0 15px 0; font-size: 18px;">Preparation Tips</h3>
-              ${appointment.preparation.map((tip: string) => `
-                <div class="tip-item">
-                  ${tip}
-                </div>
-              `).join('')}
-            </div>
-
-            <p style="margin-top: 30px;">If you need to cancel or reschedule your appointment, please do so at least 24 hours before your scheduled time.</p>
-            <p style="margin-top: 20px;">Thank you for choosing Pearl4Nails!</p>
-          </div>
-
-          <div class="footer">
-            <p style="color: #666; margin-bottom: 20px;">The Pearl4Nails Team</p>
-            <div class="footer-links">
-              <a href="mailto:${appointment.contact.email}" class="footer-link">Email Us</a>
-              <a href="tel:${appointment.contact.phone}" class="footer-link">Call Us</a>
-            </div>
-            <div class="social-icons">
-              <a href="#" style="color: #666; text-decoration: none;">&copy; ${new Date().getFullYear()} Pearl4Nails</a>
-            </div>
+            <p>If you need to reschedule or cancel your appointment, please contact us at our email or phone.</p>
+            <p>We look forward to seeing you!</p>
+            
+            <p>Best regards,<br>The Pearl4Nails Team</p>
           </div>
         </div>
       </body>
       </html>
     `;
 
-    const data = {
-      from: 'Pearl4Nails <noreply@pearl4nails.com>',
+    // Mail options
+    const mailOptions = {
+      from: `"Pearl4Nails" <${process.env.EMAIL_USER}>`,
       to: appointment.customer.email,
-      subject: 'Your Pearl4Nails Appointment is Confirmed!',
-      html,
+      subject: 'Your Pearl4Nails Appointment Confirmation',
+      html: html
     };
 
-    await resend.emails.send(data);
+    console.log('Sending appointment confirmation email to:', appointment.customer.email);
+    const info = await transporter.sendMail(mailOptions);
+    console.log('Email sent successfully:', info.response);
+    
     return { success: true };
   } catch (error) {
-    console.error('Error sending appointment confirmation:', error);
-    throw error;
+    console.error('Error sending appointment confirmation email:', error);
+    return { success: false, error };
   }
 };
 
@@ -210,95 +121,46 @@ export const sendCancellationNotification = async (appointment: any) => {
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Pearl4Nails Appointment Cancellation</title>
         <style>
-          @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
-          
           body {
-            font-family: 'Poppins', sans-serif;
+            font-family: Arial, sans-serif;
             line-height: 1.6;
             color: #333;
-            margin: 0;
-            padding: 0;
           }
-          
           .container {
             max-width: 600px;
             margin: 0 auto;
             padding: 20px;
             background-color: #fff;
-            box-shadow: 0 2px 15px rgba(0,0,0,0.05);
           }
-          
           .header {
             text-align: center;
-            padding: 40px 0;
+            padding: 20px 0;
             background-color: #fff5f7;
             border-bottom: 2px solid #ff69b4;
           }
-          
-          .logo {
-            max-width: 200px;
-            height: auto;
-            margin-bottom: 20px;
-          }
-          
-          .main-content {
-            padding: 30px;
-          }
-          
           .appointment-details {
             background-color: #fff5f7;
-            padding: 25px;
+            padding: 15px;
             border-radius: 8px;
-            margin: 30px 0;
+            margin: 20px 0;
           }
-          
           .details-item {
-            margin-bottom: 15px;
-            padding: 10px;
+            margin-bottom: 10px;
+            padding: 8px;
             background-color: #fff;
             border-radius: 5px;
             border-left: 4px solid #ff69b4;
-          }
-          
-          .footer {
-            text-align: center;
-            padding: 30px;
-            background-color: #f8f9fa;
-            border-top: 1px solid #eee;
-          }
-          
-          .footer-links {
-            margin-top: 20px;
-          }
-          
-          .footer-link {
-            display: inline-block;
-            margin: 0 10px;
-            text-decoration: none;
-            color: #ff69b4;
-            font-weight: 500;
-          }
-          
-          .social-icons {
-            margin-top: 20px;
-          }
-          
-          .social-icon {
-            display: inline-block;
-            margin: 0 10px;
-            font-size: 24px;
-            color: #666;
           }
         </style>
       </head>
       <body>
         <div class="container">
           <div class="header">
-            <img src="${getLogoUrl()}" alt="Pearl4Nails Logo" class="logo" />
-            <h1 style="color: #ff69b4; font-size: 24px; margin: 0;">Appointment Cancellation</h1>
+            <img src="${getLogoUrl()}" alt="Pearl4Nails Logo" style="max-width: 200px;" />
+            <h1 style="color: #ff69b4; font-size: 24px; margin: 10px 0;">Appointment Cancellation</h1>
           </div>
 
-          <div class="main-content">
+          <div style="padding: 20px;">
             <p>Dear ${appointment.customer.name},</p>
             <p>We regret to inform you that your appointment with Pearl4Nails has been cancelled. Here were your appointment details:</p>
 
@@ -313,49 +175,143 @@ export const sendCancellationNotification = async (appointment: any) => {
               <div class="details-item">
                 <strong>Time:</strong> ${appointment.time}
               </div>
+              <div class="details-item">
+                <strong>Location:</strong> ${appointment.location}
+              </div>
             </div>
 
-            <p style="margin-top: 30px;">If you would like to reschedule your appointment, please contact us at ${appointment.contact.email} or ${appointment.contact.phone}.</p>
-            <p style="margin-top: 20px;">Thank you for understanding.</p>
-          </div>
-
-          <div class="footer">
-            <p style="color: #666; margin-bottom: 20px;">The Pearl4Nails Team</p>
-            <div class="footer-links">
-              <a href="mailto:${appointment.contact.email}" class="footer-link">Email Us</a>
-              <a href="tel:${appointment.contact.phone}" class="footer-link">Call Us</a>
-            </div>
-            <div class="social-icons">
-              <a href="#" style="color: #666; text-decoration: none;">&copy; ${new Date().getFullYear()} Pearl4Nails</a>
-            </div>
+            <p>If you would like to reschedule your appointment, please contact us at our email or phone.</p>
+            <p>Thank you for understanding.</p>
+            
+            <p>Best regards,<br>The Pearl4Nails Team</p>
           </div>
         </div>
       </body>
       </html>
     `;
 
-    const data = {
-      from: 'Pearl4Nails <noreply@pearl4nails.com>',
+    // Mail options
+    const mailOptions = {
+      from: `"Pearl4Nails" <${process.env.EMAIL_USER}>`,
       to: appointment.customer.email,
       subject: 'Your Pearl4Nails Appointment has been Cancelled',
-      html,
+      html: html
     };
 
-    await resend.emails.send(data);
+    console.log('Sending appointment cancellation email to:', appointment.customer.email);
+    const info = await transporter.sendMail(mailOptions);
+    console.log('Email sent successfully:', info.response);
+    
     return { success: true };
   } catch (error) {
     console.error('Error sending cancellation notification:', error);
-    throw error;
+    return { success: false, error };
+  }
+};
+
+/**
+ * Send confirmation email for training registration
+ */
+export const sendTrainingConfirmationEmail = async (registration: any) => {
+  try {
+    const html = `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Pearl4Nails Training Registration Confirmation</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+          }
+          .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #fff;
+          }
+          .header {
+            text-align: center;
+            padding: 20px 0;
+            background-color: #fff5f7;
+            border-bottom: 2px solid #ff69b4;
+          }
+          .registration-details {
+            background-color: #fff5f7;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+          }
+          .details-item {
+            margin-bottom: 10px;
+            padding: 8px;
+            background-color: #fff;
+            border-radius: 5px;
+            border-left: 4px solid #ff69b4;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <img src="${getLogoUrl()}" alt="Pearl4Nails Logo" style="max-width: 200px;" />
+            <h1 style="color: #ff69b4; font-size: 24px; margin: 10px 0;">Training Registration Confirmation</h1>
+          </div>
+
+          <div style="padding: 20px;">
+            <p>Dear ${registration.fullName},</p>
+            <p>Thank you for registering for our training course at Pearl4Nails! We're excited to help you develop your skills.</p>
+
+            <div class="registration-details">
+              <h3 style="color: #ff69b4; margin: 0 0 15px 0; font-size: 18px;">Registration Details</h3>
+              <div class="details-item">
+                <strong>Course:</strong> ${registration.course}
+              </div>
+              <div class="details-item">
+                <strong>Registration Date:</strong> ${registration.date}
+              </div>
+              <div class="details-item">
+                <strong>Registration ID:</strong> ${registration.id}
+              </div>
+            </div>
+
+            <p>We will contact you shortly with detailed information about your training schedule, materials, and any preparations needed.</p>
+            <p>If you have any questions or need any further information, please don't hesitate to contact us.</p>
+            
+            <p>Best regards,<br>The Pearl4Nails Training Team</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    // Mail options
+    const mailOptions = {
+      from: `"Pearl4Nails Training" <${process.env.EMAIL_USER}>`,
+      to: registration.email,
+      subject: 'Your Pearl4Nails Training Registration Confirmation',
+      html: html
+    };
+
+    console.log('Sending training registration confirmation email to:', registration.email);
+    const info = await transporter.sendMail(mailOptions);
+    console.log('Email sent successfully:', info.response);
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error sending training registration confirmation email:', error);
+    return { success: false, error };
   }
 };
 
 export async function sendCancellationEmail(appointment: any): Promise<boolean> {
   try {
-    const logoUrl = await getLogoUrl();
-    
-    const emailContent = `
+    const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <img src="${logoUrl}" alt="Pearl4Nails Logo" style="width: 200px; margin-bottom: 20px;" />
+        <img src="${getLogoUrl()}" alt="Pearl4Nails Logo" style="width: 200px; margin-bottom: 20px;" />
         
         <h2 style="color: #333;">Appointment Cancellation Confirmation</h2>
         
@@ -375,15 +331,18 @@ export async function sendCancellationEmail(appointment: any): Promise<boolean> 
       </div>
     `;
 
-    const data = {
-      from: 'Pearl4Nails <noreply@pearl4nails.com>',
+    // Mail options
+    const mailOptions = {
+      from: `"Pearl4Nails" <${process.env.EMAIL_USER}>`,
       to: appointment.customer.email,
       subject: 'Appointment Cancellation Confirmation',
-      html: emailContent
+      html: html
     };
 
-    await resend.emails.send(data);
-    console.log('Cancellation email sent successfully to:', appointment.customer.email);
+    console.log('Sending cancellation email to:', appointment.customer.email);
+    const info = await transporter.sendMail(mailOptions);
+    console.log('Email sent successfully:', info.response);
+    
     return true;
   } catch (error) {
     console.error('Error sending cancellation email:', error);

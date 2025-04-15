@@ -20,8 +20,26 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useRouter } from 'next/navigation';
 
+interface BookingDetails {
+  service: string;
+  date: string;
+  time: string;
+  nailShape?: string | null;
+  nailDesign?: string | null;
+  tattooLocation?: string | null;
+  tattooSize?: string | null;
+  referenceImage?: string | null;
+  location: string;
+  contact: {
+    email: string;
+    phone: string;
+  };
+  preparation: string[];
+  appointmentId: string;
+}
+
 export default function BookingSuccessPage() {
-  const [bookingDetails, setBookingDetails] = useState(null);
+  const [bookingDetails, setBookingDetails] = useState<BookingDetails | null>(null);
   const [isSharing, setIsSharing] = useState(false);
   const [isAddingToCalendar, setIsAddingToCalendar] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
@@ -30,68 +48,70 @@ export default function BookingSuccessPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Check if appointment ID exists in URL
-    const searchParams = new URLSearchParams(window.location.search);
-    const appointmentId = searchParams.get('appointmentId');
+    if (typeof window !== 'undefined') {
+      const searchParams = new URLSearchParams(window.location.search);
+      const service = searchParams.get('service');
+      const status = searchParams.get('status');
+      
+      // If appointment is cancelled, redirect to cancelled page
+      if (status === 'cancelled') {
+        router.push('/booking/cancelled');
+        return;
+      }
 
-    if (!appointmentId) {
-      // Redirect to home if no appointment ID
-      router.push('/');
-      return;
-    }
+      const preparation = service === 'nails' 
+        ? [
+            "Please arrive 15 minutes early for your appointment",
+            "Make sure your nails are clean and dry",
+            "Avoid wearing nail polish if you have natural nails",
+            "Bring any reference images you would like to show"
+          ]
+        : service === 'tattoo'
+        ? [
+            "Please arrive 15 minutes early for your appointment",
+            "Make sure the area is clean and shaved if necessary",
+            "Avoid wearing tight clothing over the tattoo area",
+            "Bring any reference images you would like to show"
+          ]
+        : [
+            "Please arrive 15 minutes early for your appointment",
+            "Make sure you're comfortable with the service",
+            "Feel free to bring any reference images you would like to show"
+          ];
 
-    // Get booking details from URL parameters
-    const service = searchParams.get('service');
-    
-    const preparation = service === 'nails' 
-      ? [
-          "Please arrive 15 minutes early for your appointment",
-          "Make sure your nails are clean and dry",
-          "Avoid wearing nail polish if you have natural nails",
-          "Bring any reference images you would like to show"
-        ]
-      : service === 'tattoo'
-      ? [
-          "Please arrive 15 minutes early for your appointment",
-          "Make sure the area is clean and shaved if necessary",
-          "Avoid wearing tight clothing over the tattoo area",
-          "Bring any reference images you would like to show"
-        ]
-      : [
-          "Please arrive 15 minutes early for your appointment",
-          "Make sure you're comfortable with the service",
-          "Feel free to bring any reference images you would like to show"
-        ];
+      const details: BookingDetails = {
+        service: searchParams.get('service') || 'Service',
+        date: searchParams.get('date') || 'Date',
+        time: searchParams.get('time') || 'Time',
+        nailShape: searchParams.get('nailShape'),
+        nailDesign: searchParams.get('nailDesign'),
+        tattooLocation: searchParams.get('tattooLocation'),
+        tattooSize: searchParams.get('tattooSize'),
+        referenceImage: searchParams.get('referenceImage'),
+        location: "15 Osolo Way Off 7&8 bus stop, Ajao estate, Lagos, Nigeria",
+        contact: {
+          email: "info@pearl4nails.com",
+          phone: "+2347000000000"
+        },
+        preparation,
+        appointmentId: searchParams.get('appointmentId') || 'AP123456'
+      };
 
-    const details = {
-      service: searchParams.get('service'),
-      date: searchParams.get('date'),
-      time: searchParams.get('time'),
-      nailShape: searchParams.get('nailShape'),
-      nailDesign: searchParams.get('nailDesign'),
-      tattooLocation: searchParams.get('tattooLocation'),
-      tattooSize: searchParams.get('tattooSize'),
-      referenceImage: searchParams.get('referenceImage'),
-      customer: {
-        name: searchParams.get('customer.name'),
-        email: searchParams.get('customer.email'),
-        phone: searchParams.get('customer.phone'),
-        notes: searchParams.get('customer.notes')
-      },
-      location: "15 Osolo Way Off 7&8 bus stop, Ajao estate, Lagos, Nigeria",
-      contact: {
-        email: searchParams.get('contact.email'),
-        phone: searchParams.get('contact.phone')
-      },
-      preparation,
-      appointmentId
-    };
+      // Set booking details to state
+      setBookingDetails(details);
+      
+      // Log for debugging - no sensitive info
+      console.log("Appointment details loaded", {
+        service: details.service,
+        date: details.date,
+        time: details.time,
+        appointmentId: details.appointmentId
+      });
 
-    setBookingDetails(details);
-
-    // Redirect if user tries to access success page without booking
-    if (!details.service || !details.date || !details.time || !details.appointmentId) {
-      router.push('/');
+      // Redirect if user tries to access success page without booking
+      if (!details.service || !details.date || !details.time || !details.appointmentId) {
+        router.push('/booking');
+      }
     }
   }, [router]);
 
@@ -203,49 +223,60 @@ export default function BookingSuccessPage() {
             <p className="text-gray-600">Your appointment has been successfully booked.</p>
           </div>
 
-          <div className="bg-pink-50 rounded-lg p-6 mb-8">
-            <h2 className="font-bold text-pink-500 mb-4 text-xl">Appointment Details</h2>
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <p className="text-gray-600">Service:</p>
-              <p className="font-medium">{bookingDetails.service}</p>
+            {/* Appointment Details - Only show service info, no personal details */}
+            <div className="bg-pink-50 rounded-lg p-6 mb-8">
+              <h2 className="font-bold text-pink-500 mb-4 text-xl">Appointment Details</h2>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <p className="text-gray-600">Service:</p>
+                <p className="font-medium">{bookingDetails.service}</p>
 
-              <p className="text-gray-600">Date:</p>
-              <p className="font-medium">{bookingDetails.date}</p>
+                <p className="text-gray-600">Date:</p>
+                <p className="font-medium">{bookingDetails.date}</p>
 
-              <p className="text-gray-600">Time:</p>
-              <p className="font-medium">{bookingDetails.time}</p>
+                <p className="text-gray-600">Time:</p>
+                <p className="font-medium">{bookingDetails.time}</p>
 
-              {/* Show nail details only for nail services */}
-              {bookingDetails.service === 'nails' && (
-                <>
-                  <p className="text-gray-600">Nail Shape:</p>
-                  <p className="font-medium">{bookingDetails.nailShape}</p>
+                {/* Show nail details only if provided and for nail services */}
+                {bookingDetails.service === 'nails' && bookingDetails.nailShape && (
+                  <>
+                    <p className="text-gray-600">Nail Shape:</p>
+                    <p className="font-medium">{bookingDetails.nailShape}</p>
+                  </>
+                )}
 
-                  <p className="text-gray-600">Nail Design:</p>
-                  <p className="font-medium">{bookingDetails.nailDesign}</p>
-                </>
-              )}
+                {bookingDetails.service === 'nails' && bookingDetails.nailDesign && (
+                  <>
+                    <p className="text-gray-600">Nail Design:</p>
+                    <p className="font-medium">{bookingDetails.nailDesign}</p>
+                  </>
+                )}
 
-              {/* Show tattoo details only for tattoo services */}
-              {bookingDetails.service === 'tattoo' && (
-                <>
-                  <p className="text-gray-600">Tattoo Location:</p>
-                  <p className="font-medium">{bookingDetails.tattooLocation}</p>
+                {/* Show tattoo details only if provided and for tattoo services */}
+                {bookingDetails.service === 'tattoo' && bookingDetails.tattooLocation && (
+                  <>
+                    <p className="text-gray-600">Tattoo Location:</p>
+                    <p className="font-medium">{bookingDetails.tattooLocation}</p>
+                  </>
+                )}
 
-                  <p className="text-gray-600">Tattoo Size:</p>
-                  <p className="font-medium">{bookingDetails.tattooSize}</p>
-                </>
-              )}
+                {bookingDetails.service === 'tattoo' && bookingDetails.tattooSize && (
+                  <>
+                    <p className="text-gray-600">Tattoo Size:</p>
+                    <p className="font-medium">{bookingDetails.tattooSize}</p>
+                  </>
+                )}
 
-              {/* Show reference image if available */}
-              {bookingDetails.referenceImage && (
-                <>
-                  <p className="text-gray-600">Reference Image:</p>
-                  <p className="font-medium">{bookingDetails.referenceImage}</p>
-                </>
-              )}
+                {/* Show reference image if uploaded */}
+                {bookingDetails.referenceImage && (
+                  <>
+                    <p className="text-gray-600">Reference Image:</p>
+                    <p className="font-medium text-green-600">Uploaded ✓</p>
+                  </>
+                )}
+              </div>
             </div>
-          </div>
+            
+            {/* No customer details displayed for privacy reasons */}
 
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -416,11 +447,11 @@ export default function BookingSuccessPage() {
                     <div className="space-y-4">
                       <div className="flex items-center gap-2">
                         <Mail className="h-5 w-5 text-pink-500" />
-                        <p className="text-gray-600">{bookingDetails.contact.email}</p>
+                        <p className="text-gray-600">nwabuezemercy2@gmail.com</p>
                       </div>
                       <div className="flex items-center gap-2">
                         <Phone className="h-5 w-5 text-pink-500" />
-                        <p className="text-gray-600">{bookingDetails.contact.phone}</p>
+                        <p className="text-gray-600">09160763206</p>
                       </div>
                     </div>
                   </AccordionContent>

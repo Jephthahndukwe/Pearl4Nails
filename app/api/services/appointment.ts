@@ -120,7 +120,7 @@ export const cancelAppointment = async (appointmentId: string) => {
       success: true,
       notificationSent,
       whatsappSent,
-      redirectUrl: '/booking/cancelled?appointmentId=' + appointmentId
+      redirectUrl: `/booking/cancelled?appointmentId=${appointmentId}&status=cancelled`
     };
   } catch (error) {
     console.error('Error cancelling appointment:', error);

@@ -47,9 +47,10 @@ interface RegistrationFormProps {
     price: string
   }>
   onSubmit: (data: FormValues) => void
+  isSubmitting?: boolean
 }
 
-export function RegistrationForm({ courses, onSubmit }: RegistrationFormProps) {
+export function RegistrationForm({ courses, onSubmit, isSubmitting = false }: RegistrationFormProps) {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -186,8 +187,8 @@ export function RegistrationForm({ courses, onSubmit }: RegistrationFormProps) {
           )}
         />
 
-        <Button type="submit" className="w-full bg-pink-500 hover:bg-pink-600">
-          Submit Application
+        <Button type="submit" className="w-full bg-pink-500 hover:bg-pink-600" disabled={isSubmitting}>
+          {isSubmitting ? 'Submitting...' : 'Submit Application'}
         </Button>
       </form>
     </Form>

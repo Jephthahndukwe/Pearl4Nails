@@ -44,9 +44,11 @@ export async function GET(request: Request) {
     const formattedDate = `${month}/${day}/${year}`;
 
     try {
-      // Set a timeout for the MongoDB query
+      // Set a timeout for the MongoDB query (increased for production environments)
       const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('MongoDB connection timeout')), 8000);
+        const timeoutMS = process.env.NODE_ENV === 'production' ? 30000 : 8000;
+        console.log(`Setting MongoDB timeout to ${timeoutMS}ms (${process.env.NODE_ENV} environment)`);
+        setTimeout(() => reject(new Error(`MongoDB connection timeout after ${timeoutMS}ms`)), timeoutMS);
       });
       
       // Try to get actual time slots with a timeout

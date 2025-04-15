@@ -9,7 +9,7 @@ interface ServiceCardProps {
     id: string
     name: string
     description: string
-    price: string
+    // price: string
     image: string
     popular?: boolean
   }
@@ -32,8 +32,8 @@ export default function ServiceCard({ service }: ServiceCardProps) {
         <h3 className="text-xl font-bold mb-2">{service.name}</h3>
         <p className="text-gray-600 mb-4">{service.description}</p>
 
-        <div className="flex items-center justify-between">
-          <p className="text-lg font-bold text-pink-500">{service.price}</p>
+        <div className="flex items-start justify-start">
+          {/* <p className="text-lg font-bold text-pink-500">{service.price}</p> */}
           <Button asChild variant="ghost" className="text-pink-500 hover:bg-pink-50 p-0 h-auto">
             <Link href="/booking" className="flex items-center">
               Book Now <ArrowRight className="ml-2 w-4 h-4 transition-transform group-hover:translate-x-1" />

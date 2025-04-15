@@ -24,10 +24,14 @@ export const connectToDatabase = async (): Promise<any> => {
       throw new Error('MongoDB URI is not defined in environment variables');
     }
 
-    // Simple options compatible with most MongoDB driver versions
+    // Enhanced options for better reliability in production
     const options = {
-      connectTimeoutMS: 30000,
-      socketTimeoutMS: 45000,
+      connectTimeoutMS: 60000, // Increased from 30000
+      socketTimeoutMS: 90000, // Increased from 45000
+      serverSelectionTimeoutMS: 60000, // Adding explicit server selection timeout
+      maxPoolSize: 10, // Limit connections to avoid exhausting Netlify's limits
+      retryWrites: true
+      // w: 'majority' removed due to type incompatibility
     };
     
     try {

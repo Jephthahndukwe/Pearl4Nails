@@ -11,7 +11,7 @@ export default function TestimonialSlider() {
     {
       id: 1,
       name: "Sarah Johnson",
-      image: "/placeholder.svg?height=96&width=96&text=Sarah",
+      image: "/images/avatar.png?height=96&width=96&text=Sarah",
       role: "Regular Client",
       content:
         "I've been coming to Pearl4nails for over a year now and I'm always impressed with their work. The nail designs are creative and last for weeks. Highly recommend!",
@@ -20,7 +20,7 @@ export default function TestimonialSlider() {
     {
       id: 2,
       name: "Michelle Davis",
-      image: "/placeholder.svg?height=96&width=96&text=Michelle",
+      image: "/images/avatar.png?height=96&width=96&text=Michelle",
       role: "First-time Client",
       content:
         "My first experience at Pearl4nails was amazing! The lash extensions looked so natural and the technician was very professional. Will definitely be back!",
@@ -29,7 +29,7 @@ export default function TestimonialSlider() {
     {
       id: 3,
       name: "Jessica Williams",
-      image: "/placeholder.svg?height=96&width=96&text=Jessica",
+      image: "/images/avatar.png?height=96&width=96&text=Jessica",
       role: "Regular Client",
       content:
         "The microblading service at Pearl4nails completely transformed my look. The attention to detail is incredible and the results are long-lasting.",
@@ -38,7 +38,7 @@ export default function TestimonialSlider() {
     {
       id: 4,
       name: "Amanda Brown",
-      image: "/placeholder.svg?height=96&width=96&text=Amanda",
+      image: "/images/avatar.png?height=96&width=96&text=Amanda",
       role: "Regular Client",
       content:
         "I love the tooth gems! They add such a unique touch to my smile. The application was quick and painless, and they've lasted much longer than I expected.",

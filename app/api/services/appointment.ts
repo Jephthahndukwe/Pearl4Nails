@@ -159,7 +159,7 @@ export async function getAvailableTimeSlots(date: string): Promise<{ time: strin
       return cachedData.data;
     }
     
-    console.log('Fetching appointments for date:', formattedDate);
+    console.log(`[${process.env.NODE_ENV}] Fetching appointments for date:`, formattedDate);
     const collection = await getAppointmentCollection();
 
     // First get all booked time slots for the date
@@ -168,7 +168,8 @@ export async function getAvailableTimeSlots(date: string): Promise<{ time: strin
       status: { $in: ['confirmed', 'pending'] }
     }).toArray();
 
-    console.log('Booked appointments found:', bookedAppointments.length);
+    console.log(`[${process.env.NODE_ENV}] Booked appointments found:`, bookedAppointments.length);
+    console.log('Booked appointment times:', bookedAppointments.map(a => a.time));
 
     // Get all possible time slots (9am to 8pm)
     const allTimeSlots = [
@@ -191,7 +192,15 @@ export async function getAvailableTimeSlots(date: string): Promise<{ time: strin
 
     return availableTimeSlots;
   } catch (error) {
-    console.error('Error getting available time slots:', error);
+    console.error(`[${process.env.NODE_ENV}] Error getting available time slots:`, error);
+    // Add specific error detection for Netlify
+    if (process.env.NODE_ENV === 'production') {
+      console.error('Production environment detected, detailed error info:', {
+        errorName: error.name,
+        errorMessage: error.message,
+        stack: error.stack,
+      });
+    }
     throw error;
   }
 };

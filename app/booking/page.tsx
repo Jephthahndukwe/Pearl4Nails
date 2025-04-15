@@ -106,17 +106,32 @@ export default function BookingPage() {
           return;
         }
 
+        // Show loading state
+        if (isMounted) {
+          setTimeSlotsError('Loading available time slots...');
+        }
+
         // Set a timeout for the fetch request
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout for production
         
         try {
-          const response = await fetch(`/api/booking/available-time-slots?date=${date.toISOString()}`, {
-            signal: controller.signal
+          // Use a cache-busting query parameter to avoid browser cache issues
+          const cacheBuster = Date.now();
+          const response = await fetch(`/api/booking/available-time-slots?date=${date.toISOString()}&_=${cacheBuster}`, {
+            signal: controller.signal,
+            // Force network request to prevent browser caching
+            headers: {
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache',
+              'Expires': '0'
+            }
           });
           clearTimeout(timeoutId);
           
-          if (!response.ok) {
+          // Sometimes Netlify returns 200 with redirect details instead of actual error code
+          // Check both status code and response structure
+          if (!response.ok || response.redirected) {
             const data = await response.json().catch(() => ({ error: 'Invalid response from server' }));
             throw new Error(data.error || 'Failed to fetch available time slots');
           }
@@ -136,7 +151,28 @@ export default function BookingPage() {
           clearTimeout(timeoutId);
           console.error('Fetch error:', fetchError);
           
-          // If we get an AbortError or any other fetch error, use client-side fallback
+          // Try one more time with a different approach - direct JSON parsing instead of response.json()
+          try {
+            const directResponse = await fetch(`/api/booking/available-time-slots?date=${date.toISOString()}&directFetch=true`, {
+              method: 'GET',
+              cache: 'no-store'
+            });
+            
+            const text = await directResponse.text();
+            const parsedData = JSON.parse(text);
+            
+            if (parsedData && Array.isArray(parsedData.timeSlots)) {
+              if (isMounted) {
+                setAvailableTimeSlots(parsedData.timeSlots);
+                setTimeSlotsError(parsedData.notice || null);
+                return; // Success in second attempt
+              }
+            }
+          } catch (secondError) {
+            console.error('Second fetch attempt also failed:', secondError);
+          }
+          
+          // If both attempts fail, use client-side fallback
           if (isMounted) {
             console.warn('Using client-side fallback time slots');
             // Make sure date is defined before calling getDefaultTimeSlots

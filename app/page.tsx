@@ -18,7 +18,7 @@ export default function Home() {
       id: "nails",
       name: "Nail Art & Extensions",
       description: "Custom designs that express your unique style",
-      price: "$50+",
+      // price: "$50+",
       image: "/images/Nail.jpg",
       popular: true,
     },
@@ -26,7 +26,7 @@ export default function Home() {
       id: "lashes",
       name: "Lash Extensions",
       description: "Enhance your natural beauty with stunning lashes",
-      price: "$80+",
+      // price: "$80+",
       image: "/images/lashExtension.jpg",
       popular: false,
     },
@@ -34,10 +34,29 @@ export default function Home() {
       id: "makeup",
       name: "Professional Makeup",
       description: "Perfect for special occasions and photoshoots",
-      price: "$60+",
+      // price: "$60+",
       image: "/images/Makeup.jpg",
       popular: true,
     }
+  ]
+
+  const avatars = [
+    {
+      id: 1,
+      name: 'avatar'
+    },
+    {
+      id: 2,
+      name: 'avatar'
+    },
+    {
+      id: 3,
+      name: 'avatar'
+    },
+    {
+      id: 4,
+      name: 'avatar'
+    },
   ]
 
   return (
@@ -102,11 +121,11 @@ export default function Home() {
 
             <div className="mt-12 flex items-center gap-6">
               <div className="flex -space-x-4">
-                {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="w-10 h-10 rounded-full border-2 border-white overflow-hidden">
+                {avatars.map((avatar) => (
+                  <div key={avatar.id} className="w-10 h-10 rounded-full border-2 border-white overflow-hidden">
                     <Image
-                      src={`/placeholder.svg?height=40&width=40&text=Client${i}`}
-                      alt={`Happy client ${i}`}
+                      src={`/images/${avatar.name}.png`}
+                      alt={`Happy client`}
                       width={40}
                       height={40}
                       className="w-full h-full object-cover"

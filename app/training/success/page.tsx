@@ -1,7 +1,7 @@
 'use client'
 
 import Link from "next/link"
-import { useEffect, useState } from "react"
+import { useEffect, useState, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Calendar, Share, CheckCircle2 } from "lucide-react"
@@ -13,7 +13,8 @@ interface TrainingDetails {
   date: string
 }
 
-export default function TrainingSuccessPage() {
+// Client component that uses searchParams
+function TrainingSuccessContent() {
   const searchParams = useSearchParams()
   const [trainingDetails, setTrainingDetails] = useState<TrainingDetails | null>(null)
   const [isSharing, setIsSharing] = useState(false)
@@ -168,5 +169,39 @@ export default function TrainingSuccessPage() {
         </div>
       </div>
     </main>
+  )
+}
+
+// Loading state for Suspense boundary
+function TrainingSuccessLoading() {
+  return (
+    <main className="min-h-screen py-16 px-4 bg-gray-50">
+      <div className="max-w-4xl mx-auto">
+        <div className="mb-8 text-center">
+          <div className="mx-auto h-20 w-20 rounded-full bg-pink-100 animate-pulse"></div>
+          <h1 className="text-4xl font-bold text-pink-500 mb-4">Application Submitted!</h1>
+          <p className="text-xl text-gray-700 mb-8">
+            Loading your registration details...
+          </p>
+        </div>
+        <div className="bg-pink-50 rounded-lg p-6 mb-8 shadow-sm animate-pulse">
+          <div className="h-6 bg-pink-200 rounded mb-4"></div>
+          <div className="space-y-2">
+            <div className="h-4 bg-pink-100 rounded"></div>
+            <div className="h-4 bg-pink-100 rounded"></div>
+            <div className="h-4 bg-pink-100 rounded"></div>
+          </div>
+        </div>
+      </div>
+    </main>
+  )
+}
+
+// Main page component that wraps the client component in a Suspense boundary
+export default function TrainingSuccessPage() {
+  return (
+    <Suspense fallback={<TrainingSuccessLoading />}>
+      <TrainingSuccessContent />
+    </Suspense>
   )
 }

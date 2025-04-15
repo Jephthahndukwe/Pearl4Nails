@@ -128,17 +128,39 @@ export const cancelAppointment = async (appointmentId: string) => {
   }
 };
 
+// Simple in-memory cache for time slot data
+interface TimeSlotCache {
+  [key: string]: {
+    data: { time: string; isAvailable: boolean }[];
+    timestamp: number;
+  };
+}
+
+// Cache will expire after 5 minutes (300000 ms)
+const CACHE_TTL = 300000;
+const timeSlotCache: TimeSlotCache = {};
+
 export async function getAvailableTimeSlots(date: string): Promise<{ time: string; isAvailable: boolean }[]> {
   try {
-    const collection = await getAppointmentCollection();
-    
     // Convert date to MM/DD/YYYY format with leading zeros
     const dateObj = new Date(date);
     const month = String(dateObj.getMonth() + 1).padStart(2, '0');
     const day = String(dateObj.getDate()).padStart(2, '0');
     const year = dateObj.getFullYear();
     const formattedDate = `${month}/${day}/${year}`;
-    console.log('Checking appointments for date:', formattedDate);
+    
+    // Check if we have valid cached data
+    const cacheKey = `timeslots_${formattedDate}`;
+    const now = Date.now();
+    const cachedData = timeSlotCache[cacheKey];
+    
+    if (cachedData && (now - cachedData.timestamp < CACHE_TTL)) {
+      console.log('Returning cached time slots for date:', formattedDate);
+      return cachedData.data;
+    }
+    
+    console.log('Fetching appointments for date:', formattedDate);
+    const collection = await getAppointmentCollection();
 
     // First get all booked time slots for the date
     const bookedAppointments = await collection.find({
@@ -146,7 +168,7 @@ export async function getAvailableTimeSlots(date: string): Promise<{ time: strin
       status: { $in: ['confirmed', 'pending'] }
     }).toArray();
 
-    console.log('Booked appointments:', bookedAppointments);
+    console.log('Booked appointments found:', bookedAppointments.length);
 
     // Get all possible time slots (9am to 8pm)
     const allTimeSlots = [
@@ -161,7 +183,12 @@ export async function getAvailableTimeSlots(date: string): Promise<{ time: strin
       isAvailable: !bookedAppointments.some(appointment => appointment.time === time)
     }));
 
-    console.log('Available time slots:', availableTimeSlots);
+    // Store result in cache
+    timeSlotCache[cacheKey] = {
+      data: availableTimeSlots,
+      timestamp: now
+    };
+
     return availableTimeSlots;
   } catch (error) {
     console.error('Error getting available time slots:', error);

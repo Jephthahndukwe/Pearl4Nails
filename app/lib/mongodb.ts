@@ -3,22 +3,53 @@ import { MongoClient, ObjectId } from 'mongodb';
 // Initialize MongoDB client
 let client: MongoClient;
 let db: any;
+let connectionAttempts = 0;
+const MAX_RETRY_ATTEMPTS = 3;
+const RETRY_DELAY_MS = 1000;
 
-export const connectToDatabase = async () => {
+// Helper function to sleep
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+export const connectToDatabase = async (): Promise<any> => {
   try {
-    if (!client) {
-      client = new MongoClient(process.env.MONGODB_URI || '', {
-        serverApi: {
-          version: '1',
-          strict: true,
-          deprecationErrors: true,
-        },
-      });
+    if (client && db) {
+      return db;
+    }
+    
+    connectionAttempts++;
+    console.log(`Attempting to connect to MongoDB (attempt ${connectionAttempts}/${MAX_RETRY_ATTEMPTS})...`);
+    
+    const uri = process.env.MONGODB_URI || '';
+    if (!uri) {
+      throw new Error('MongoDB URI is not defined in environment variables');
+    }
+
+    // Simple options compatible with most MongoDB driver versions
+    const options = {
+      connectTimeoutMS: 30000,
+      socketTimeoutMS: 45000,
+    };
+    
+    try {
+      client = new MongoClient(uri, options);
       await client.connect();
       db = client.db('pearl4nails');
-      console.log('Connected to MongoDB');
+      console.log('Connected to MongoDB successfully');
+      connectionAttempts = 0; // Reset on successful connection
+      return db;
+    } catch (initialError) {
+      console.error('Initial MongoDB connection error:', initialError);
+      
+      // If we've reached max retries, throw the error
+      if (connectionAttempts >= MAX_RETRY_ATTEMPTS) {
+        throw initialError;
+      }
+      
+      // Try again with a short delay
+      console.log(`Retrying connection in ${RETRY_DELAY_MS}ms...`);
+      await sleep(RETRY_DELAY_MS);
+      return connectToDatabase(); // Recursive retry
     }
-    return db;
   } catch (error) {
     console.error('Error connecting to MongoDB:', error);
     throw error;

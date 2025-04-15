@@ -104,7 +104,7 @@ export const cancelAppointment = async (appointmentId: string) => {
     const appointment = await collection.findOne({ _id: new ObjectId(appointmentId) });
     
     // Send cancellation notifications
-    await sendCancellationNotification(appointment);
+    await sendCancellationNotification(appointment as any);
     const notificationSent = await sendPushNotification({
       ...appointment,
       status: 'cancelled'
@@ -143,10 +143,10 @@ const timeSlotCache: TimeSlotCache = {};
 export async function getAvailableTimeSlots(date: string): Promise<{ time: string; isAvailable: boolean }[]> {
   try {
     // Convert date to MM/DD/YYYY format with leading zeros
-    const dateObj = new Date(date);
-    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-    const day = String(dateObj.getDate()).padStart(2, '0');
-    const year = dateObj.getFullYear();
+    const dateParamObj = new Date(date);
+    const month = String(dateParamObj.getMonth() + 1).padStart(2, '0');
+    const day = String(dateParamObj.getDate()).padStart(2, '0');
+    const year = dateParamObj.getFullYear();
     const formattedDate = `${month}/${day}/${year}`;
     
     // Check if we have valid cached data
@@ -163,13 +163,30 @@ export async function getAvailableTimeSlots(date: string): Promise<{ time: strin
     const collection = await getAppointmentCollection();
 
     // First get all booked time slots for the date
+    // Try multiple date formats to handle potential format inconsistencies between environments
+    
+    // Create different possible date formats to query with
+    const possibleDateFormats = [
+      formattedDate, // MM/DD/YYYY
+      `${month}-${day}-${year}`, // MM-DD-YYYY
+      `${year}-${month}-${day}`, // YYYY-MM-DD
+      dateParamObj.toISOString().split('T')[0], // YYYY-MM-DD ISO format
+      new Date(dateParamObj).toLocaleDateString('en-US') // Locale-specific format
+    ];
+    
+    console.log(`[${process.env.NODE_ENV}] Searching for appointments with possible date formats:`, possibleDateFormats);
+    
     const bookedAppointments = await collection.find({
-      date: formattedDate,
+      $or: [
+        { date: { $in: possibleDateFormats } },
+        // If the date is stored as a Date object in MongoDB
+        { date: { $gte: new Date(new Date(formattedDate).setHours(0,0,0,0)), $lt: new Date(new Date(formattedDate).setHours(23,59,59,999)) } }
+      ],
       status: { $in: ['confirmed', 'pending'] }
     }).toArray();
 
     console.log(`[${process.env.NODE_ENV}] Booked appointments found:`, bookedAppointments.length);
-    console.log('Booked appointment times:', bookedAppointments.map(a => a.time));
+    console.log('Booked appointment times:', bookedAppointments.map((a: any) => a.time));
 
     // Get all possible time slots (9am to 8pm)
     const allTimeSlots = [
@@ -191,14 +208,15 @@ export async function getAvailableTimeSlots(date: string): Promise<{ time: strin
     };
 
     return availableTimeSlots;
-  } catch (error) {
-    console.error(`[${process.env.NODE_ENV}] Error getting available time slots:`, error);
+  } catch (error: unknown) {
+    const err = error as Error;
+    console.error(`[${process.env.NODE_ENV}] Error getting available time slots:`, err);
     // Add specific error detection for Netlify
     if (process.env.NODE_ENV === 'production') {
       console.error('Production environment detected, detailed error info:', {
-        errorName: error.name,
-        errorMessage: error.message,
-        stack: error.stack,
+        errorName: err.name,
+        errorMessage: err.message,
+        stack: err.stack,
       });
     }
     throw error;

@@ -55,7 +55,24 @@ export async function GET(request: Request) {
       const availableTimeSlotsPromise = getAvailableTimeSlots(formattedDate);
       const availableTimeSlots = await Promise.race([availableTimeSlotsPromise, timeoutPromise]) as any;
       
-      return new Response(JSON.stringify({ timeSlots: availableTimeSlots, source: 'mongodb' }));
+      // Add debug information in response but only in development
+      const responseObj = { 
+        timeSlots: availableTimeSlots, 
+        source: 'mongodb',
+        serverTime: new Date().toISOString(),
+        environment: process.env.NODE_ENV || 'unknown'
+      };
+      
+      // Include date format info for debugging
+      if (process.env.NODE_ENV === 'development') {
+        responseObj.debug = {
+          requestedDate: date,
+          formattedDate: formattedDate,
+          requestUrl: request.url
+        };
+      }
+      
+      return new Response(JSON.stringify(responseObj));
     } catch (dbError) {
       console.warn('Using fallback time slots due to database error:', dbError);
       

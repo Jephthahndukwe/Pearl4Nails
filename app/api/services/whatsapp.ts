@@ -52,10 +52,15 @@ export const sendWhatsAppNotification = async (bookingDetails: any) => {
       optionalFields = '\nNo additional details provided';
     }
     
+    // Get service details using the new structure if available
+    const serviceDisplay = bookingDetails.serviceTypeName || bookingDetails.serviceName || bookingDetails.service;
+    const priceDisplay = bookingDetails.servicePrice ? `\nPrice: ${bookingDetails.servicePrice}` : '';
+    const durationDisplay = bookingDetails.serviceDuration ? `\nDuration: ${bookingDetails.serviceDuration}` : '';
+    
     const message = bookingDetails.status === 'cancelled'
       ? `Appointment Cancelled!
-\n\nService: ${bookingDetails.service}\nDate: ${bookingDetails.date}\nTime: ${bookingDetails.time}\nCustomer: ${bookingDetails.customer.name}\nPhone: ${bookingDetails.customer.phone}\nEmail: ${bookingDetails.customer.email}${optionalFields}`
-      : `New Appointment Booked!\n\nService: ${bookingDetails.service}\nDate: ${bookingDetails.date}\nTime: ${bookingDetails.time}\nCustomer: ${bookingDetails.customer.name}\nPhone: ${bookingDetails.customer.phone}\nEmail: ${bookingDetails.customer.email}${optionalFields}`;
+\n\nService: ${serviceDisplay}${priceDisplay}${durationDisplay}\nDate: ${bookingDetails.date}\nTime: ${bookingDetails.time}\nCustomer: ${bookingDetails.customer.name}\nPhone: ${bookingDetails.customer.phone}\nEmail: ${bookingDetails.customer.email}${optionalFields}`
+      : `New Appointment Booked!\n\nService: ${serviceDisplay}${priceDisplay}${durationDisplay}\nDate: ${bookingDetails.date}\nTime: ${bookingDetails.time}\nCustomer: ${bookingDetails.customer.name}\nPhone: ${bookingDetails.customer.phone}\nEmail: ${bookingDetails.customer.email}${optionalFields}`;
 
     // Using the original 'message' parameter for proper formatting
     const response = await axios.get('https://api.callmebot.com/whatsapp.php', {

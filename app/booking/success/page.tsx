@@ -22,6 +22,11 @@ import { useRouter } from 'next/navigation';
 
 interface BookingDetails {
   service: string;
+  serviceType?: string;
+  serviceName?: string;
+  serviceTypeName?: string;
+  servicePrice?: string;
+  serviceDuration?: string;
   date: string;
   time: string;
   nailShape?: string | null;
@@ -81,6 +86,11 @@ export default function BookingSuccessPage() {
 
       const details: BookingDetails = {
         service: searchParams.get('service') || 'Service',
+        serviceType: searchParams.get('serviceType') || undefined,
+        serviceName: searchParams.get('serviceName') || undefined,
+        serviceTypeName: searchParams.get('serviceTypeName') || undefined,
+        servicePrice: searchParams.get('servicePrice') || undefined,
+        serviceDuration: searchParams.get('serviceDuration') || undefined,
         date: searchParams.get('date') || 'Date',
         time: searchParams.get('time') || 'Time',
         nailShape: searchParams.get('nailShape'),
@@ -130,10 +140,10 @@ export default function BookingSuccessPage() {
     setIsAddingToCalendar(true)
     try {
       const event: CalendarEvent = {
-        title: `Pearl4Nails - ${bookingDetails.service}`,
-        description: `Service: ${bookingDetails.service}\nLocation: ${bookingDetails.location}\nContact: ${bookingDetails.contact.email}`,
+        title: `Pearl4Nails - ${bookingDetails.serviceTypeName || bookingDetails.serviceName || bookingDetails.service}`,
+        description: `Service: ${bookingDetails.serviceTypeName || bookingDetails.serviceName || bookingDetails.service}${bookingDetails.servicePrice ? `\nPrice: ${bookingDetails.servicePrice}` : ''}${bookingDetails.serviceDuration ? `\nDuration: ${bookingDetails.serviceDuration}` : ''}\nLocation: ${bookingDetails.location}\nContact: ${bookingDetails.contact.email}`,
         start: new Date(`${bookingDetails.date} ${bookingDetails.time}`),
-        end: new Date(new Date(`${bookingDetails.date} ${bookingDetails.time}`).getTime() + 90 * 60000) // 90 minutes duration
+        end: new Date(new Date(`${bookingDetails.date} ${bookingDetails.time}`).getTime() + (bookingDetails.serviceDuration ? parseInt(bookingDetails.serviceDuration) : 90) * 60000) // Use service duration or default to 90 minutes
       }
 
       const result = await addEventToCalendar(event)
@@ -153,7 +163,7 @@ export default function BookingSuccessPage() {
   const handleShare = async () => {
     setIsSharing(true)
     try {
-      const text = `I have an appointment at Pearl4Nails!\n\nService: ${bookingDetails.service}\nDate: ${bookingDetails.date}\nTime: ${bookingDetails.time}\nLocation: ${bookingDetails.location}\n\nLooking forward to it! 🎉`
+      const text = `I have an appointment at Pearl4Nails!\n\nService: ${bookingDetails.serviceTypeName || bookingDetails.serviceName || bookingDetails.service}${bookingDetails.servicePrice ? `\nPrice: ${bookingDetails.servicePrice}` : ''}${bookingDetails.serviceDuration ? `\nDuration: ${bookingDetails.serviceDuration}` : ''}\nDate: ${bookingDetails.date}\nTime: ${bookingDetails.time}\nLocation: ${bookingDetails.location}\n\nLooking forward to it! 🎉`
       
       if (navigator.share) {
         await navigator.share({
@@ -228,7 +238,21 @@ export default function BookingSuccessPage() {
               <h2 className="font-bold text-pink-500 mb-4 text-xl">Appointment Details</h2>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <p className="text-gray-600">Service:</p>
-                <p className="font-medium">{bookingDetails.service}</p>
+                <p className="font-medium">{bookingDetails.serviceTypeName || bookingDetails.serviceName || bookingDetails.service}</p>
+                
+                {bookingDetails.servicePrice && (
+                  <>
+                    <p className="text-gray-600">Price:</p>
+                    <p className="font-medium">{bookingDetails.servicePrice}</p>
+                  </>
+                )}
+                
+                {bookingDetails.serviceDuration && (
+                  <>
+                    <p className="text-gray-600">Duration:</p>
+                    <p className="font-medium">{bookingDetails.serviceDuration}</p>
+                  </>
+                )}
 
                 <p className="text-gray-600">Date:</p>
                 <p className="font-medium">{bookingDetails.date}</p>

@@ -16,6 +16,11 @@ export async function POST(request: Request) {
     // Create appointment
     const appointment = await createAppointment({
       service: data.service,
+      serviceType: data.serviceType,
+      serviceName: data.serviceName,
+      serviceTypeName: data.serviceTypeName,
+      servicePrice: data.servicePrice,
+      serviceDuration: data.serviceDuration,
       date: data.date,
       time: data.time,
       customer: {

@@ -150,12 +150,16 @@ interface TimeSlotCache {
 const CACHE_TTL = 300000;
 const timeSlotCache: TimeSlotCache = {};
 
-export async function getAvailableTimeSlots(date: string): Promise<{ time: string; isAvailable: boolean }[]> {
+export async function getAvailableTimeSlots(searchDate: string): Promise<{ time: string; isAvailable: boolean }[]> {
   try {
-    // Convert date to MM/DD/YYYY format with leading zeros
-    const dateParamObj = new Date(date);
-    const month = String(dateParamObj.getMonth() + 1).padStart(2, '0');
+    // Parse the search date into day/month/year
+    const dateParamObj = new Date(searchDate);
+    if (isNaN(dateParamObj.getTime())) {
+      throw new Error(`Invalid date format: ${searchDate}`);
+    }
+    
     const day = String(dateParamObj.getDate()).padStart(2, '0');
+    const month = String(dateParamObj.getMonth() + 1).padStart(2, '0');
     const year = dateParamObj.getFullYear();
     const formattedDate = `${month}/${day}/${year}`;
     
@@ -169,22 +173,29 @@ export async function getAvailableTimeSlots(date: string): Promise<{ time: strin
       return cachedData.data;
     }
     
-    console.log(`[${process.env.NODE_ENV}] Fetching appointments for date:`, formattedDate);
+    console.log(`Fetching appointments for date: ${formattedDate}`);
+    
+    console.log(`Connecting to MongoDB for date: ${formattedDate}`);
+    
+    // Connect to MongoDB and get the collection
     const collection = await getAppointmentCollection();
-
-    // First get all booked time slots for the date
-    // Use a comprehensive query that works with all date formats and structures
+    
+    if (!collection) {
+      throw new Error('Failed to get appointment collection');
+    }
+    
+    console.log('Successfully connected to MongoDB');
     
     // Create different possible date formats to query with
     const possibleDateFormats = [
-      formattedDate, // MM/DD/YYYY
-      `${month}-${day}-${year}`, // MM-DD-YYYY
-      `${year}-${month}-${day}`, // YYYY-MM-DD
+      formattedDate,                             // MM/DD/YYYY
+      `${month}-${day}-${year}`,                // MM-DD-YYYY
+      `${year}-${month}-${day}`,                // YYYY-MM-DD
       dateParamObj.toISOString().split('T')[0], // YYYY-MM-DD ISO format
       new Date(dateParamObj).toLocaleDateString('en-US') // Locale-specific format
     ];
     
-    console.log(`[${process.env.NODE_ENV}] Searching for appointments with possible date formats:`, possibleDateFormats);
+    console.log(`Searching with date formats:`, possibleDateFormats);
     
     // Build a comprehensive query that checks all possible date locations
     const bookedAppointments = await collection.find({

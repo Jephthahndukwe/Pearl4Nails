@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Check, ChevronRight, Upload, Info, CalendarPlus } from "lucide-react"
+import { Check, ChevronRight, Upload, Info, CalendarPlus, Clock } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -25,11 +25,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { serviceCategories, findServiceById, findServiceTypeById, type ServiceType } from "@/types/service"
 
 export default function BookingPage() {
   const [date, setDate] = useState<Date | undefined>(undefined)
   const [step, setStep] = useState(1)
   const [selectedService, setSelectedService] = useState<string | null>(null)
+  const [selectedServiceType, setSelectedServiceType] = useState<string | null>(null)
   const [selectedTime, setSelectedTime] = useState<string>('')
   const [selectedNailShape, setSelectedNailShape] = useState<string | null>(null)
   const [selectedNailDesign, setSelectedNailDesign] = useState<string | null>(null)
@@ -41,19 +43,8 @@ export default function BookingPage() {
   const [availableTimeSlots, setAvailableTimeSlots] = useState<{ time: string; isAvailable: boolean }[]>([])
   const [timeSlotsError, setTimeSlotsError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-
-  const services = [
-    { id: "nails", name: "Nails", price: "$50+" },
-    { id: "lashes", name: "Lash Extensions", price: "$80+" },
-    { id: "microblading", name: "Microblading", price: "$120+" },
-    { id: "makeup", name: "Makeup", price: "$60+" },
-    { id: "manicure", name: "Manicure & Pedicure", price: "$45+" },
-    { id: "piercing", name: "Piercing", price: "$30+" },
-    { id: "tooth-gems", name: "Tooth Gems", price: "$25+" },
-    { id: "brow", name: "Brow Trimming", price: "$20+" },
-    { id: "hair", name: "Hair Revamping", price: "$70+" },
-    { id: "tattoo", name: "Tattoo", price: "$150+" },
-  ]
+  
+  // Service data is now imported from types/service.ts
 
   const nailShapes = [
     { id: "Stiletto", name: "Stiletto" },
@@ -96,111 +87,52 @@ export default function BookingPage() {
 
   useEffect(() => {
     let isMounted = true;
+
     const fetchAvailableTimeSlots = async () => {
+      if (!date) return;
+
       try {
-        if (!date) {
-          if (isMounted) {
-            setTimeSlotsError('Please select a date first');
-            setAvailableTimeSlots([]);
-          }
-          return;
-        }
-
         // Show loading state
-        if (isMounted) {
-          setTimeSlotsError('Loading available time slots...');
+        setTimeSlotsError(null);
+
+        // Simple fetch with no race conditions or timeouts
+        const response = await fetch(`/api/booking/available-time-slots?date=${date.toISOString()}&_=${Date.now()}`, {
+          method: 'GET',
+          cache: 'no-store',
+          // Force network request to prevent browser caching
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          }
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Server error: ${response.status} - ${errorText}`);
         }
 
-        // Set a timeout for the fetch request with proper error handling
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => {
-          try {
-            controller.abort('Timeout exceeded'); // Add a reason for the abort
-          } catch (e) {
-            // Some browsers don't support reason parameter
-            controller.abort();
-          }
-        }, 10000); // 10 second timeout
+        const data = await response.json();
         
-        try {
-          // Use a cache-busting query parameter to avoid browser cache issues
-          const cacheBuster = Date.now();
-          const response = await fetch(`/api/booking/available-time-slots?date=${date.toISOString()}&_=${cacheBuster}`, {
-            signal: controller.signal,
-            // Force network request to prevent browser caching
-            headers: {
-              'Cache-Control': 'no-cache, no-store, must-revalidate',
-              'Pragma': 'no-cache',
-              'Expires': '0'
-            }
-          });
-          clearTimeout(timeoutId);
-          
-          // Sometimes Netlify returns 200 with redirect details instead of actual error code
-          // Check both status code and response structure
-          if (!response.ok || response.redirected) {
-            const data = await response.json().catch(() => ({ error: 'Invalid response from server' }));
-            throw new Error(data.error || 'Failed to fetch available time slots');
-          }
-          
-          const data = await response.json();
-          
-          // Check if we received the notice property which indicates fallback data
-          if (data.notice) {
-            console.warn('Using fallback time slots from API:', data.notice);
-          }
-          
-          if (isMounted) {
-            setAvailableTimeSlots(data.timeSlots || []);
-            setTimeSlotsError(data.notice || null);
-          }
-        } catch (fetchError) {
-          clearTimeout(timeoutId);
-          console.error('Fetch error:', fetchError);
-          
-          // Try one more time with a different approach - direct JSON parsing instead of response.json()
-          try {
-            const directResponse = await fetch(`/api/booking/available-time-slots?date=${date.toISOString()}&directFetch=true`, {
-              method: 'GET',
-              cache: 'no-store'
-            });
-            
-            const text = await directResponse.text();
-            const parsedData = JSON.parse(text);
-            
-            if (parsedData && Array.isArray(parsedData.timeSlots)) {
-              if (isMounted) {
-                setAvailableTimeSlots(parsedData.timeSlots);
-                setTimeSlotsError(parsedData.notice || null);
-                return; // Success in second attempt
-              }
-            }
-          } catch (secondError) {
-            console.error('Second fetch attempt also failed:', secondError);
-          }
-          
-          // If both attempts fail, use client-side fallback
-          if (isMounted) {
-            console.warn('Using client-side fallback time slots');
-            // Make sure date is defined before calling getDefaultTimeSlots
-            if (date) {
-              const fallbackSlots = getDefaultTimeSlots(date);
-              setAvailableTimeSlots(fallbackSlots);
-              setTimeSlotsError('Using estimated availability. Please contact us to confirm your booking.');
-            }
-          }
+        if (data.message) {
+          console.log('API message:', data.message);
+        }
+        
+        if (isMounted) {
+          setAvailableTimeSlots(data.timeSlots || []);
+          setTimeSlotsError(data.message || null);
         }
       } catch (error) {
+        console.error('Error fetching time slots:', error);
+        
         if (isMounted) {
-          console.error('Error in time slot fetch effect:', error);
-          if (date) {
-            const fallbackSlots = getDefaultTimeSlots(date);
-            setAvailableTimeSlots(fallbackSlots);
-            setTimeSlotsError('Using estimated availability. Please contact us to confirm your booking.');
-          } else {
-            setAvailableTimeSlots([]);
-            setTimeSlotsError('Please select a date first');
-          }
+          setAvailableTimeSlots([]);
+          setTimeSlotsError('Could not load time slots. Please try again later.');
+        }
+      } finally {
+        if (isMounted) {
+          // We're done loading
+          // (No explicit loading state to set)
         }
       }
     };
@@ -232,6 +164,14 @@ export default function BookingPage() {
         },
         body: JSON.stringify({
           service: selectedService,
+          serviceType: selectedServiceType,
+          serviceName: selectedService ? findServiceById(selectedService)?.name || '' : '',
+          serviceTypeName: selectedServiceType ? 
+            (selectedService && findServiceTypeById(selectedService, selectedServiceType)?.name) || '' : '',
+          servicePrice: selectedServiceType && selectedService ? 
+            (findServiceTypeById(selectedService, selectedServiceType)?.price) || '' : '',
+          serviceDuration: selectedServiceType && selectedService ? 
+            (findServiceTypeById(selectedService, selectedServiceType)?.duration) || '' : '',
           date: date?.toLocaleDateString('en-US', {
             year: 'numeric',
             month: '2-digit',
@@ -259,9 +199,20 @@ export default function BookingPage() {
       // Pass only appointment and service details to success page using URL search params - no customer info
       const url = new URL('/booking/success', window.location.origin);
       url.searchParams.set('appointmentId', data.appointmentId);
-      url.searchParams.set('service', selectedService);
+      url.searchParams.set('service', selectedService || '');
+      url.searchParams.set('serviceType', selectedServiceType || '');
       url.searchParams.set('date', date?.toLocaleDateString());
       url.searchParams.set('time', selectedTime);
+      
+      // Add service type details to URL
+      if (selectedService && selectedServiceType) {
+        const serviceTypeInfo = findServiceTypeById(selectedService, selectedServiceType);
+        if (serviceTypeInfo) {
+          url.searchParams.set('serviceName', serviceTypeInfo.name);
+          url.searchParams.set('servicePrice', serviceTypeInfo.price);
+          url.searchParams.set('serviceDuration', serviceTypeInfo.duration);
+        }
+      }
       
       // Only pass service-specific details if provided
       if (selectedService === 'nails') {
@@ -281,22 +232,45 @@ export default function BookingPage() {
       console.error('Error:', error);
       alert(error instanceof Error ? error.message : 'Failed to confirm booking');
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
+  // Function to advance to the next step
   const nextStep = () => {
-    setStep(step + 1)
-    window.scrollTo(0, 0)
-  }
+    // Only manually advance when Next button is clicked
+    if (step === 1 && selectedService) {
+      // If a service is selected, go to service type selection
+      setStep(2);
+    } else if (step === 2 && selectedServiceType) {
+      // If a service type is selected, go to date/time selection
+      setStep(3);
+    } else {
+      setStep(step + 1);
+    }
+    window.scrollTo(0, 0);
+  };
 
   const prevStep = () => {
-    setStep(step - 1)
-    window.scrollTo(0, 0)
-  }
+    if (step === 2) {
+      // If at service type selection, go back to service selection
+      setStep(1);
+    } else if (step === 3) {
+      // If at date/time selection, go back to service type selection
+      setStep(2);
+    } else {
+      setStep(step - 1);
+    }
+    window.scrollTo(0, 0);
+  };
+
+  // Reset service type when changing service category
+  useEffect(() => {
+    setSelectedServiceType(null);
+  }, [selectedService]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
+    const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader()
       reader.onloadend = () => {
@@ -490,29 +464,32 @@ export default function BookingPage() {
         <form onSubmit={handleSubmit}>
           {step === 1 && (
             <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-              <h2 className="text-2xl font-bold text-pink-500 mb-6">Select a Service</h2>
+              <h2 className="text-2xl font-bold text-pink-500 mb-6">Select a Service Category</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-                {services.map((service) => (
+                {serviceCategories.map((category) => (
                   <div
-                    key={service.id}
-                    className={`border rounded-lg p-4 cursor-pointer transition-all ${
-                      selectedService === service.id
-                        ? "border-pink-500 bg-pink-50"
-                        : "border-gray-200 hover:border-pink-300"
-                    }`}
-                    onClick={() => setSelectedService(service.id)}
+                    key={category.id}
+                    className={`border rounded-lg p-4 cursor-pointer transition-all ${selectedService === category.id
+                      ? "border-pink-500 bg-pink-50"
+                      : "border-gray-200 hover:border-pink-300"
+                      }`}
+                    onClick={() => {
+                      // Only update the selection without advancing to next step
+                      setSelectedService(category.id);
+                      // Reset service type when changing service category
+                      setSelectedServiceType(null);
+                    }}
                   >
                     <div className="flex justify-between items-center">
                       <div>
-                        <h3 className="font-medium">{service.name}</h3>
-                        <p className="text-gray-500 text-sm">{service.price}</p>
+                        <h3 className="font-medium">{category.name}</h3>
+                        <p className="text-gray-500 text-sm">{category.types.length} services available</p>
                       </div>
                       <div
-                        className={`w-5 h-5 rounded-full border ${
-                          selectedService === service.id ? "border-pink-500 bg-pink-500" : "border-gray-300"
-                        }`}
+                        className={`w-5 h-5 rounded-full border ${selectedService === category.id ? "border-pink-500 bg-pink-500" : "border-gray-300"
+                          }`}
                       >
-                        {selectedService === service.id && <Check className="w-4 h-4 text-white" />}
+                        {selectedService === category.id && <Check className="w-4 h-4 text-white" />}
                       </div>
                     </div>
                   </div>
@@ -530,8 +507,69 @@ export default function BookingPage() {
               </div>
             </div>
           )}
+          
+          {step === 2 && selectedService && (
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+              <h2 className="text-2xl font-bold text-pink-500 mb-6">
+                Select {findServiceById(selectedService)?.name} Service
+              </h2>
+              <div className="grid grid-cols-1 gap-4 mb-8">
+                {findServiceById(selectedService)?.types.map((type) => (
+                  <div
+                    key={type.id}
+                    className={`border rounded-lg p-4 cursor-pointer transition-all ${selectedServiceType === type.id
+                      ? "border-pink-500 bg-pink-50"
+                      : "border-gray-200 hover:border-pink-300"
+                      }`}
+                    onClick={() => {
+                      // Only update the selection without advancing to next step
+                      setSelectedServiceType(type.id);
+                    }}
+                  >
+                    <div className="flex flex-col sm:flex-row justify-between">
+                      <div className="flex-1">
+                        <h3 className="font-medium text-lg">{type.name}</h3>
+                        <p className="text-gray-600 text-sm mt-1">{type.description}</p>
+                      </div>
+                      <div className="flex items-center gap-4 mt-2 sm:mt-0">
+                        <div className="flex items-center text-gray-500">
+                          <Clock className="w-4 h-4 mr-1" />
+                          <span className="text-sm">{type.duration}</span>
+                        </div>
+                        <p className="font-bold text-pink-500">{type.price}</p>
+                        <div
+                          className={`w-5 h-5 rounded-full border ${selectedServiceType === type.id ? "border-pink-500 bg-pink-500" : "border-gray-300"
+                            }`}
+                        >
+                          {selectedServiceType === type.id && <Check className="w-4 h-4 text-white" />}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="flex justify-between">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={prevStep}
+                  className="border-pink-500 text-pink-500"
+                >
+                  Back
+                </Button>
+                <Button
+                  type="button"
+                  onClick={nextStep}
+                  disabled={!selectedServiceType}
+                  className="bg-pink-500 hover:bg-pink-600"
+                >
+                  Next <ChevronRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
 
-          {step === 2 && (
+          {step === 3 && (
             <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
               <h2 className="text-2xl font-bold text-pink-500 mb-6">Select Date & Time</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
@@ -598,7 +636,7 @@ export default function BookingPage() {
             </div>
           )}
 
-          {step === 3 && (
+          {step === 4 && (
             <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
               <h2 className="text-2xl font-bold text-pink-500 mb-6">Customize Your Service</h2>
 
@@ -779,7 +817,7 @@ export default function BookingPage() {
             </div>
           )}
 
-          {step === 4 && (
+          {step === 5 && (
             <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
               <h2 className="text-2xl font-bold text-pink-500 mb-6">Your Details</h2>
 
@@ -815,7 +853,7 @@ export default function BookingPage() {
                 <h3 className="font-bold text-pink-500 mb-2">Booking Summary</h3>
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <p className="text-gray-600">Service:</p>
-                  <p>{services.find((s) => s.id === selectedService)?.name}</p>
+                  <p>{findServiceById(selectedService || '')?.name || 'Not selected'}</p>
 
                   <p className="text-gray-600">Date:</p>
                   <p>{date?.toLocaleDateString()}</p>

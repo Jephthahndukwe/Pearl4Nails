@@ -69,8 +69,16 @@ export const sendAppointmentConfirmation = async (appointment: any) => {
             <div class="appointment-details">
               <h3 style="color: #ff69b4; margin: 0 0 15px 0; font-size: 18px;">Appointment Details</h3>
               <div class="details-item">
-                <strong>Service:</strong> ${appointment.service}
+                <strong>Service:</strong> ${appointment.serviceTypeName || appointment.serviceName || appointment.service}
               </div>
+              ${appointment.servicePrice ? `
+              <div class="details-item">
+                <strong>Price:</strong> ${appointment.servicePrice}
+              </div>` : ''}
+              ${appointment.serviceDuration ? `
+              <div class="details-item">
+                <strong>Duration:</strong> ${appointment.serviceDuration}
+              </div>` : ''}
               <div class="details-item">
                 <strong>Date:</strong> ${appointment.date}
               </div>
@@ -167,8 +175,16 @@ export const sendCancellationNotification = async (appointment: any) => {
             <div class="appointment-details">
               <h3 style="color: #ff69b4; margin: 0 0 15px 0; font-size: 18px;">Appointment Details</h3>
               <div class="details-item">
-                <strong>Service:</strong> ${appointment.service}
+                <strong>Service:</strong> ${appointment.serviceTypeName || appointment.serviceName || appointment.service}
               </div>
+              ${appointment.servicePrice ? `
+              <div class="details-item">
+                <strong>Price:</strong> ${appointment.servicePrice}
+              </div>` : ''}
+              ${appointment.serviceDuration ? `
+              <div class="details-item">
+                <strong>Duration:</strong> ${appointment.serviceDuration}
+              </div>` : ''}
               <div class="details-item">
                 <strong>Date:</strong> ${appointment.date}
               </div>

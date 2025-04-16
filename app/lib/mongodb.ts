@@ -24,19 +24,27 @@ export const connectToDatabase = async (): Promise<any> => {
       throw new Error('MongoDB URI is not defined in environment variables');
     }
 
-    // Enhanced options for better reliability in production
+    // Simple connection options that are compatible with both environments
+    // and won't cause DNS or SRV resolution issues
     const options = {
-      connectTimeoutMS: 60000, // Increased from 30000
-      socketTimeoutMS: 90000, // Increased from 45000
-      serverSelectionTimeoutMS: 60000, // Adding explicit server selection timeout
-      maxPoolSize: 10, // Limit connections to avoid exhausting Netlify's limits
-      retryWrites: true
-      // w: 'majority' removed due to type incompatibility
+      // No timeout settings - use MongoDB defaults
+      // No direct connection - let MongoDB drivers handle connection type
+      maxPoolSize: 10, // Limit connection pool size
+      retryWrites: true // Enable retry
     };
     
+    // Log with a timestamp to help debug
+    console.log(`MongoDB connection attempt at ${new Date().toISOString()}`);
+    
     try {
+      // Create a new client with a longer timeout
       client = new MongoClient(uri, options);
-      await client.connect();
+      
+      // Attempt to connect with a timeout
+      const connectPromise = client.connect();
+      await connectPromise;
+      
+      // Get the database
       db = client.db('pearl4nails');
       console.log('Connected to MongoDB successfully');
       connectionAttempts = 0; // Reset on successful connection

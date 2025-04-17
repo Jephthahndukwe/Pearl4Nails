@@ -225,19 +225,7 @@ export default function TrainingPage() {
             </div>
           ))}
         </div>
-
-        <div className="bg-white rounded-xl p-10 shadow-md border border-gray-100 text-center mb-16">
-          <h2 className="text-3xl font-bold text-gray-800 mb-2">Need a <span className="text-pink-600">Custom Program?</span></h2>
-          <div className="w-16 h-1 bg-pink-500 mx-auto mb-6"></div>
-          <p className="text-gray-600 mb-8 max-w-2xl mx-auto text-lg">
-            Looking for a specific training program? We offer custom options tailored to your needs.
-            Contact us today and we'll create the perfect training solution for you.
-          </p>
-          <Button asChild size="lg" className="bg-pink-600 hover:bg-pink-700 text-white px-8 py-6 rounded-lg text-lg font-medium transition-all hover:translate-y-[-2px]">
-            <Link href="/contact">Contact For Custom Training</Link>
-          </Button>
-        </div>
-
+        
         {showForm && (
           <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
             <div className="bg-white rounded-2xl w-full max-w-3xl h-[90vh] shadow-2xl flex flex-col">

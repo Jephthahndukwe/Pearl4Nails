@@ -8,7 +8,6 @@ import WhatsAppQR from "@/components/whatsapp-qr"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import TestimonialSlider from "@/components/testimonial-slider"
-import FloatingWhatsApp from "@/components/floating-whatsapp"
 import TiktokIcon from "@/components/tiktok-icon"
 import { Sparkles } from "lucide-react"
 
@@ -430,7 +429,7 @@ export default function Home() {
         </div>
       </section>
 
-      <FloatingWhatsApp />
+     
     </main>
   )
 }

@@ -102,7 +102,16 @@ export const sendTrainingWhatsAppNotification = async (registration: any) => {
       optionalFields = '\nNo additional details provided';
     }
     
-    const message = `New Training Registration!\n\nCourse: ${registration.course}\nDate: ${registration.date}\nStudent: ${registration.fullName}\nPhone: ${registration.phoneNumber}\nEmail: ${registration.email}${optionalFields}`;
+    const message = `New Training Registration!
+
+Course: ${registration.course}
+Duration: ${registration.duration}
+Equipment: ${registration.equipment}
+Price: ${registration.price}
+Date: ${registration.date}
+Student: ${registration.fullName}
+Phone: ${registration.phoneNumber}
+Email: ${registration.email}${optionalFields}`;
 
     // Using the original 'message' parameter for proper formatting
     const response = await axios.get('https://api.callmebot.com/whatsapp.php', {

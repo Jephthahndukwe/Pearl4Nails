@@ -120,6 +120,26 @@ function TrainingSuccessContent() {
 
         <div className="space-y-4 mb-8 bg-white rounded-lg p-6 shadow-sm border border-gray-100">
           <p className="text-gray-700 font-medium">
+            Payment Information:
+          </p>
+          <p className="text-sm text-gray-600 mb-3">
+            A 50% deposit is required to confirm your training registration. Please make the payment within 48 hours of
+            registration to secure your spot in the program.
+          </p>
+          <div className="bg-white p-4 rounded-lg border border-gray-200">
+            <h4 className="font-medium mb-2">Payment Details</h4>
+            <div className="space-y-2">
+              <p className="text-sm">Account Name: <span className='font-bold'>Mercy Ezinne Nwabueze</span></p>
+              <p className="text-sm">Account Number: <span className='font-bold'>9160763206</span></p>
+              <p className="text-sm">Bank: <span className='font-bold'>Opay Digital Service Limited</span></p>
+              <p className="text-sm">Reference: <span className='font-bold'>Your Name + Training Course</span></p>
+            </div>
+          </div>
+          <p className="text-sm text-yellow-600 mt-2">
+            Please include your name and training course in the payment reference.
+          </p>
+          
+          <p className="text-gray-700 font-medium mt-6">
             In the meantime, you can:
           </p>
           <ul className="space-y-2">
@@ -139,7 +159,7 @@ function TrainingSuccessContent() {
         </div>
 
         <div className="space-y-6">
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          {/* <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button 
               onClick={handleAddToCalendar} 
               className="flex items-center gap-2 bg-pink-500 hover:bg-pink-600"
@@ -156,7 +176,7 @@ function TrainingSuccessContent() {
               <Share className="h-5 w-5" />
               {isSharing ? 'Sharing...' : 'Share Details'}
             </Button>
-          </div>
+          </div> */}
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center mt-4">
             <Link href="/training" className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-pink-500 hover:bg-pink-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-pink-500">

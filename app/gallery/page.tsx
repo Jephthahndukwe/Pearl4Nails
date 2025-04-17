@@ -40,7 +40,7 @@ export default function GalleryPage() {
             ))}
           </TabsList>
 
-          <TabsContent value="all" className="xs:mt-[55%] lg:mt-[2%]">
+          <TabsContent value="all" className="xs:mt-[55%] sm:mt-[3%] lg:mt-[2%] md:mt-[%]">
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {services.map((service, serviceIndex) => (
                 <div key={service.id} className="relative aspect-square group">

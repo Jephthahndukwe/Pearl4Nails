@@ -287,6 +287,15 @@ export const sendTrainingConfirmationEmail = async (registration: any) => {
                 <strong>Course:</strong> ${registration.course}
               </div>
               <div class="details-item">
+                <strong>Duration:</strong> ${registration.duration}
+              </div>
+              <div class="details-item">
+                <strong>Equipment Option:</strong> ${registration.equipment}
+              </div>
+              <div class="details-item">
+                <strong>Price:</strong> ${registration.price}
+              </div>
+              <div class="details-item">
                 <strong>Registration Date:</strong> ${registration.date}
               </div>
               <div class="details-item">

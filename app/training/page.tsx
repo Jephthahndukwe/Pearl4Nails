@@ -86,12 +86,12 @@ export default function TrainingPage() {
         "Business setup guidance",
       ],
       priceMatrix: {
-        "3-days-provided": "₦280,000",
-        "3-days-self": "₦180,000",
-        "1-week-provided": "₦380,000",
-        "1-week-self": "₦280,000"
+        "3-days-provided": "₦150,000",
+        "3-days-self": "₦100,000",
+        "1-week-provided": "₦250,000",
+        "1-week-self": "₦200,000"
       },
-      basePrice: "₦180,000-₦380,000",
+      basePrice: "₦100,000-₦250,000",
       image: "/images/MicroBlading.jpg",
     },
   ]

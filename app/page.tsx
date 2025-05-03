@@ -1,3 +1,5 @@
+"use client"
+
 import Image from "next/image"
 import Link from "next/link"
 import { Instagram, ChevronRight, Star } from "lucide-react"
@@ -10,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import TestimonialSlider from "@/components/testimonial-slider"
 import TiktokIcon from "@/components/tiktok-icon"
 import { Sparkles } from "lucide-react"
+import { useState, useEffect, useMemo } from "react";
 
 export default function Home() {
   const featuredServices = [

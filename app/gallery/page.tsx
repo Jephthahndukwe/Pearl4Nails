@@ -11,12 +11,12 @@ export default function GalleryPage() {
     { id: "lashes", name: "Lash Extensions", images: lashImages },
     { id: "microblading", name: "Microblading", images: microbladingImages },
     { id: "makeup", name: "Makeup", images: makeupImages },
-    { id: "manicure", name: "Manicure & Pedicure", images: manicureImages },
-    { id: "piercing", name: "Piercing", images: piercingImages },
-    { id: "tooth-gems", name: "Tooth Gems", images: toothGemsImages },
-    { id: "brow", name: "Brow Trimming", images: browImages },
-    { id: "hair", name: "Hair Revamping", images: hairImages },
-    { id: "tattoo", name: "Tattoo", images: tattooImages },
+   // { id: "manicure", name: "Manicure & Pedicure", images: manicureImages },
+  //  { id: "piercing", name: "Piercing", images: piercingImages },
+ //   { id: "tooth-gems", name: "Tooth Gems", images: toothGemsImages },
+  //  { id: "brow", name: "Brow Trimming", images: browImages },
+ //   { id: "hair", name: "Hair Revamping", images: hairImages },
+//   { id: "tattoo", name: "Tattoo", images: tattooImages },
   ]
 
   return (

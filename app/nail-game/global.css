@@ -1,0 +1,87 @@
+/* Nail Game cursor styles */
+.cursor-brush {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23ec4899' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9.06 11.9 8.07-8.06a2.85 2.85 0 1 1 4.03 4.03l-8.06 8.08'%3E%3C/path%3E%3Cpath d='M7.07 14.94c-1.66 0-3 1.35-3 3.02 0 1.33-2.5 1.52-2 2.02 1.08 1.1 2.49 2.02 4 2.02 2.2 0 4-1.8 4-4.04a3.01 3.01 0 0 0-3-3.02z'%3E%3C/path%3E%3C/svg%3E") 2 22, auto;
+}
+
+.cursor-eraser {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23ec4899' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21'%3E%3C/path%3E%3Cpath d='M22 21H7'%3E%3C/path%3E%3Cpath d='m5 11 9 9'%3E%3C/path%3E%3C/svg%3E") 2 22, auto;
+}
+
+.cursor-glitter {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23ec4899' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3v18'%3E%3C/path%3E%3Cpath d='M3 12h18'%3E%3C/path%3E%3Cpath d='m4.9 4.9 14.2 14.2'%3E%3C/path%3E%3Cpath d='m19.1 4.9-14.2 14.2'%3E%3C/path%3E%3C/svg%3E") 12 12, auto;
+}
+
+.cursor-sticker {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23ec4899' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolygon points='12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2'%3E%3C/polygon%3E%3C/svg%3E") 12 12, auto;
+}
+
+/* Animation for the color swatches */
+@keyframes colorSwatch {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+
+.color-swatch-animation {
+  animation: colorSwatch 0.3s ease-in-out;
+}
+
+/* Animation for the tap-to-draw prompts */
+@keyframes pulseTap {
+  0% { transform: scale(1); opacity: 0.9; }
+  50% { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(1); opacity: 0.9; }
+}
+
+.tap-prompt {
+  animation: pulseTap 2s ease-in-out infinite;
+  box-shadow: 0 0 15px rgba(236, 72, 153, 0.6);
+}
+
+/* Prevent touch event default behaviors */
+.nail-canvas, .nail-canvas-container {
+  touch-action: none !important;
+  -webkit-touch-callout: none !important;
+  -webkit-user-select: none !important;
+  user-select: none !important;
+  overscroll-behavior: none !important;
+}
+
+/* This class is applied to body when drawing is active */
+.body-no-scroll {
+  overflow: hidden !important;
+  position: fixed !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* Stop scroll propagation from canvas */
+.prevent-scroll {
+  overscroll-behavior: contain !important;
+  touch-action: none !important;
+  -ms-touch-action: none !important;
+  -webkit-overflow-scrolling: auto !important;
+}
+
+/* Make the nail container stand out more */
+.nail-container {
+  box-shadow: 0 4px 12px rgba(236, 72, 153, 0.15);
+}
+
+/* Make it obvious that nails are clickable/tappable */
+.nail-canvas-container::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle at center, rgba(236, 72, 153, 0.1) 0%, transparent 70%);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.nail-canvas-container:hover::after {
+  opacity: 1;
+}

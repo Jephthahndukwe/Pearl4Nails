@@ -1,0 +1,192 @@
+/* Nail Challenge Game Styles */
+
+.game-title {
+  text-shadow: 2px 2px 4px rgba(236, 72, 153, 0.3);
+}
+
+/* Fix to allow page scrolling while preventing canvas from causing scroll issues */
+.game-canvas-container {
+  touch-action: none; /* Prevent touch actions only on canvas */
+  position: relative;
+}
+
+/* Apply no-scroll only during active drawing/interaction */
+.body-no-scroll {
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
+}
+
+/* Make sure the main container allows scrolling */
+.nail-challenge-container {
+  overflow-y: auto;
+  max-height: 100%;
+  padding-bottom: 50px; /* Add padding to ensure there's space at the bottom */
+}
+
+.countdown-timer {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: bold;
+  background: linear-gradient(135deg, #f9a8d4, #ec4899);
+  color: white;
+  box-shadow: 0 4px 10px rgba(236, 72, 153, 0.3);
+  animation: pulse 1s infinite alternate;
+}
+
+.level-card {
+  transition: all 0.3s ease;
+}
+
+.level-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+}
+
+.level-locked {
+  filter: grayscale(1);
+  opacity: 0.7;
+}
+
+.star-score {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.star {
+  width: 30px;
+  height: 30px;
+  transform-origin: center;
+}
+
+.star-active {
+  color: #facc15;
+  animation: star-pop 0.5s ease;
+}
+
+.star-inactive {
+  color: #d1d5db;
+}
+
+.confetti {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  animation: fall 3s linear infinite;
+}
+
+.nail-preview {
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.nail-preview:hover {
+  transform: scale(1.05);
+}
+
+.nail-preview.active {
+  border: 3px solid #ec4899;
+}
+
+.score-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.score-badge {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  border-radius: 9999px;
+  font-weight: bold;
+}
+
+.score-perfect {
+  background: linear-gradient(135deg, #fef08a, #facc15);
+  color: #92400e;
+}
+
+.score-good {
+  background: linear-gradient(135deg, #bbf7d0, #4ade80);
+  color: #166534;
+}
+
+.score-fail {
+  background: linear-gradient(135deg, #fecaca, #ef4444);
+  color: #7f1d1d;
+}
+
+.mode-card {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.mode-card:hover {
+  transform: translateY(-5px);
+}
+
+.mode-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: linear-gradient(90deg, #ec4899, #8b5cf6);
+}
+
+/* Animations */
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(1.05);
+  }
+}
+
+@keyframes star-pop {
+  0% {
+    transform: scale(0);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes fall {
+  0% {
+    transform: translateY(-100px) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .countdown-timer {
+    width: 50px;
+    height: 50px;
+    font-size: 20px;
+  }
+  
+  .star {
+    width: 24px;
+    height: 24px;
+  }
+}

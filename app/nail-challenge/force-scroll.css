@@ -1,0 +1,55 @@
+/* Force scrolling to work at all times but prevent double scrollbars */
+html, body {
+  overflow-y: auto !important;
+  overscroll-behavior-y: auto !important;
+  position: static !important;
+  height: auto !important;
+  touch-action: auto !important;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(236, 72, 153, 0.5) transparent;
+}
+
+/* Make sure the main container is scrollable but don't add extra scrollbars */
+.nail-challenge-container {
+  overflow-y: visible !important;
+  overflow-x: hidden !important;
+  max-height: none !important;
+  min-height: 100vh;
+  position: relative !important;
+  touch-action: auto !important;
+}
+
+/* Allow canvas interactions but don't prevent scrolling */
+.game-canvas-container {
+  position: relative;
+  overflow: visible !important;
+  touch-action: manipulation !important; /* Allow scroll but also handle other touch events */
+}
+
+/* Fix for card container */
+.recreate-design-card {
+  overflow: visible !important;
+  max-height: none !important;
+  position: relative !important;
+}
+
+/* Only apply no-scroll to the canvas itself */
+.nail-canvas {
+  touch-action: none !important; /* Prevent touch scroll just on canvas */
+}
+
+/* Ensure container scrollability without adding scrollbars */
+.force-scroll-container {
+  overflow-y: visible !important;
+  overflow-x: hidden !important;
+  touch-action: pan-y !important;
+  position: relative !important;
+  max-height: none !important;
+}
+
+/* Ensure tool area is visible */
+.tool-area {
+  position: relative !important;
+  overflow: visible !important;
+  touch-action: auto !important;
+}

@@ -12,6 +12,10 @@ export default function NailGameLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
-  return <>{children}</>
+  return (
+    <div className="bg-gradient-to-b from-pink-50 to-white min-h-screen">
+      {children}
+    </div>
+  )
 }
 

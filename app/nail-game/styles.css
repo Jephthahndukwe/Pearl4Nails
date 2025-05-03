@@ -1,0 +1,239 @@
+/* Nail Game enhanced styles */
+.nail-container {
+  position: relative;
+  background: linear-gradient(135deg, #fff9fb 0%, #fcedf3 100%);
+  border-radius: 1rem;
+  box-shadow: 0 8px 20px rgba(236, 72, 153, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.nail-container:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 28px rgba(236, 72, 153, 0.15);
+}
+
+.nail-canvas {
+  border-radius: 0.5rem;
+  cursor: crosshair;
+  transition: opacity 0.2s ease;
+}
+
+.nail-canvas-container {
+  position: relative;
+  overflow: hidden;
+  border-radius: 0.75rem;
+  border: 2px solid rgba(236, 72, 153, 0.2);
+  background-color: white;
+}
+
+.color-swatch {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 3px solid transparent;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.color-swatch:hover {
+  transform: scale(1.15);
+}
+
+.color-swatch.active {
+  border-color: white;
+  box-shadow: 0 0 0 2px rgba(236, 72, 153, 0.8);
+  transform: scale(1.1);
+}
+
+.tool-button {
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.tool-button:hover {
+  transform: translateY(-2px);
+}
+
+.tool-button.active {
+  background-color: rgba(236, 72, 153, 0.15);
+  color: rgba(236, 72, 153, 1);
+}
+
+.nail-preview {
+  transition: transform 0.3s ease;
+}
+
+.nail-preview:hover {
+  transform: scale(1.05);
+}
+
+.nail-progress-container {
+  position: relative;
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  background-color: rgba(243, 244, 246, 1);
+  overflow: hidden;
+}
+
+.nail-progress-bar {
+  position: absolute;
+  height: 100%;
+  border-radius: 4px;
+  background: linear-gradient(90deg, rgba(236, 72, 153, 0.7) 0%, rgba(236, 72, 153, 1) 100%);
+  transition: width 0.5s ease;
+}
+
+.nail-slider .slider-track {
+  height: 4px;
+  background-color: rgba(243, 244, 246, 1);
+}
+
+.nail-slider .slider-thumb {
+  width: 16px;
+  height: 16px;
+  background-color: rgba(236, 72, 153, 1);
+  border-radius: 50%;
+  border: 2px solid white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease;
+}
+
+.nail-slider .slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+.sticker-button {
+  background-color: white;
+  border: 1px solid rgba(229, 231, 235, 1);
+  border-radius: 0.5rem;
+  padding: 0.5rem;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.sticker-button:hover {
+  transform: translateY(-2px);
+  border-color: rgba(236, 72, 153, 0.5);
+}
+
+.sticker-button.active {
+  background-color: rgba(236, 72, 153, 0.15);
+  border-color: rgba(236, 72, 153, 0.8);
+}
+
+/* Animation for nail completion */
+@keyframes nailComplete {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+.nail-complete-animation {
+  animation: nailComplete 0.6s ease-in-out;
+}
+
+/* Enhanced hand shape with nails positioning */
+.hand-outline {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0.1;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 500 300' fill='none' stroke='%23ec4899' stroke-width='2'%3E%3Cpath d='M40,180 C60,150 80,120 100,100 C120,80 140,70 180,70 C220,70 240,80 260,100 C280,120 300,150 320,180 C340,210 360,240 380,260'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+}
+
+/* Confetti animation for completed design */
+.confetti {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background-color: #ec4899;
+  border-radius: 50%;
+  animation: confetti-fall 5s ease-in-out infinite;
+}
+
+@keyframes confetti-fall {
+  0% {
+    transform: translateY(-100vh) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+/* Nail selection indicators */
+.nail-selector {
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.nail-selector.active {
+  transform: scale(1.1);
+  box-shadow: 0 0 0 2px rgba(236, 72, 153, 1);
+}
+
+.nail-selector.completed {
+  border: 2px solid rgba(34, 197, 94, 0.7);
+}
+
+/* Canvas background patterns */
+.canvas-pattern-dots {
+  background-image: radial-gradient(rgba(236, 72, 153, 0.1) 1px, transparent 1px);
+  background-size: 12px 12px;
+}
+
+.canvas-pattern-grid {
+  background-image: linear-gradient(rgba(236, 72, 153, 0.05) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(236, 72, 153, 0.05) 1px, transparent 1px);
+  background-size: 10px 10px;
+}
+
+/* Tool panel enhancements */
+.tools-panel {
+  backdrop-filter: blur(8px);
+  background-color: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(236, 72, 153, 0.2);
+  border-radius: 1rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+/* Glitter effect */
+.glitter-effect {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Ccircle cx='10' cy='10' r='1' fill='%23ec4899' fill-opacity='0.2'/%3E%3Ccircle cx='30' cy='40' r='1' fill='%23ec4899' fill-opacity='0.2'/%3E%3Ccircle cx='50' cy='20' r='1' fill='%23ec4899' fill-opacity='0.2'/%3E%3Ccircle cx='70' cy='60' r='1' fill='%23ec4899' fill-opacity='0.2'/%3E%3Ccircle cx='90' cy='30' r='1' fill='%23ec4899' fill-opacity='0.2'/%3E%3Ccircle cx='20' cy='80' r='1' fill='%23ec4899' fill-opacity='0.2'/%3E%3Ccircle cx='40' cy='50' r='1' fill='%23ec4899' fill-opacity='0.2'/%3E%3Ccircle cx='60' cy='90' r='1' fill='%23ec4899' fill-opacity='0.2'/%3E%3Ccircle cx='80' cy='70' r='1' fill='%23ec4899' fill-opacity='0.2'/%3E%3C/svg%3E");
+  mix-blend-mode: screen;
+}
+
+/* Page transitions */
+.page-transition-enter {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.page-transition-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 300ms, transform 300ms;
+}
+
+.page-transition-exit {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.page-transition-exit-active {
+  opacity: 0;
+  transform: translateY(-20px);
+  transition: opacity 300ms, transform 300ms;
+}

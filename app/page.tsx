@@ -64,17 +64,17 @@ export default function Home() {
    // Gallery image data with real image paths and fallbacks
   const galleryData = {
     nails: [
-      { id: 1, src: "/images/gallery/Nail27.png", fallback: "/api/placeholder/300/300?text=Nails1", title: "Beauty Service" },
-      { id: 2, src: "/images/gallery/Nail16.jpeg", fallback: "/api/placeholder/300/300?text=Nails2", title: "Beauty Service" },
-      { id: 3, src: "/images/gallery/Nail10.jpeg", fallback: "/api/placeholder/300/300?text=Nails3", title: "Beauty Service" },
-      { id: 4, src: "/images/gallery/Nail13.jpeg", fallback: "/api/placeholder/300/300?text=Nails4", title: "Beauty Service" }
+      { id: 1, src: "/images/Nail27.png", fallback: "/api/placeholder/300/300?text=Nails1", title: "Beauty Service" },
+      { id: 2, src: "/images/Nail16.jpeg", fallback: "/api/placeholder/300/300?text=Nails2", title: "Beauty Service" },
+      { id: 3, src: "/images/Nail10.jpeg", fallback: "/api/placeholder/300/300?text=Nails3", title: "Beauty Service" },
+      { id: 4, src: "/images/Nail13.jpeg", fallback: "/api/placeholder/300/300?text=Nails4", title: "Beauty Service" }
     ],
     lashes: [
-      { id: 1, src: "/images/gallery/Lashextension2.png", fallback: "/api/placeholder/300/300?text=Lashes1", title: "Beauty Service" },
-      { id: 2, src: "/images/gallery/Lashextensipn1.png", fallback: "/api/placeholder/300/300?text=Lashes2", title: "Beauty Service" },
+      { id: 1, src: "/images/Lashextension2.png", fallback: "/api/placeholder/300/300?text=Lashes1", title: "Beauty Service" },
+      { id: 2, src: "/images/Lashextension1.png", fallback: "/api/placeholder/300/300?text=Lashes2", title: "Beauty Service" },
     ],
     makeup: [
-      { id: 1, src: "/images/gallery/Makeup1.jpeg", fallback: "/api/placeholder/300/300?text=Makeup1", title: "Beauty Service" },
+      { id: 1, src: "/images/Makeup1.jpeg", fallback: "/api/placeholder/300/300?text=Makeup1", title: "Beauty Service" },
     ]
   };
 

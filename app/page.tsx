@@ -150,7 +150,7 @@ export default function Home() {
               </Button>
             </div>
 
-            <div className="mt-8">
+            {/* <div className="mt-8">
               <Button
                 asChild
                 variant="outline"
@@ -162,7 +162,7 @@ export default function Home() {
                   Try Our Nail Art Game!
                 </Link>
               </Button>
-            </div>
+            </div> */}
 
             <div className="mt-12 flex items-center gap-6">
               <div className="flex -space-x-4">

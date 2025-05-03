@@ -40,7 +40,7 @@ export default function GalleryPage() {
             ))}
           </TabsList>
 
-          <TabsContent value="all" className="xs:mt-[30%] sm:mt-[3%] lg:mt-[2%] md:mt-[%]">
+          <TabsContent value="all" className="xs:mt-[15%] sm:mt-[3%] lg:mt-[2%] md:mt-[%]">
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {services.map((service, serviceIndex) => (
                 <div key={service.id} className="relative aspect-square group">
@@ -62,7 +62,7 @@ export default function GalleryPage() {
           </TabsContent>
 
           {services.map((service) => (
-            <TabsContent key={service.id} value={service.id} className="xs:mt-[30%] lg:mt-[2%]">
+            <TabsContent key={service.id} value={service.id} className="xs:mt-[15%] lg:mt-[2%]">
               <ImageGrid images={service.images} serviceName={service.name} />
             </TabsContent>
           ))}

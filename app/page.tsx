@@ -58,6 +58,49 @@ export default function Home() {
     },
   ]
 
+   // Gallery image data with real image paths and fallbacks
+  const galleryData = {
+    nails: [
+      { id: 1, src: "/images/gallery/Nail27.png", fallback: "/api/placeholder/300/300?text=Nails1", title: "Beauty Service" },
+      { id: 2, src: "/images/gallery/Nail16.jpeg", fallback: "/api/placeholder/300/300?text=Nails2", title: "Beauty Service" },
+      { id: 3, src: "/images/gallery/Nail10.jpeg", fallback: "/api/placeholder/300/300?text=Nails3", title: "Beauty Service" },
+      { id: 4, src: "/images/gallery/Nail13.jpeg", fallback: "/api/placeholder/300/300?text=Nails4", title: "Beauty Service" }
+    ],
+    lashes: [
+      { id: 1, src: "/images/gallery/Lashextension2.png", fallback: "/api/placeholder/300/300?text=Lashes1", title: "Beauty Service" },
+      { id: 2, src: "/images/gallery/Lashextensipn1.png", fallback: "/api/placeholder/300/300?text=Lashes2", title: "Beauty Service" },
+    ],
+    makeup: [
+      { id: 1, src: "/images/gallery/Makeup1.jpeg", fallback: "/api/placeholder/300/300?text=Makeup1", title: "Beauty Service" },
+    ]
+  };
+
+  // Function for image error handling
+  const handleImageError = (e) => {
+    e.target.onerror = null; // Prevent infinite error loop
+    e.target.src = e.target.dataset.fallback;
+  };
+  
+  // Create a memoized combined array for the 'All' view
+  const allImages = useMemo(() => {
+    // Combine all images from different categories
+    const combined = [
+      ...galleryData.nails,
+      ...galleryData.lashes, 
+      ...galleryData.makeup
+    ];
+    
+    // Shuffle the array for randomness (Fisher-Yates algorithm)
+    const shuffled = [...combined];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    
+    // Take up to 8 items
+    return shuffled.slice(0, 8);
+  }, []);
+
   return (
     <main className="flex min-h-screen flex-col">
       {/* Hero Section */}
@@ -210,93 +253,106 @@ export default function Home() {
           </div>
 
           <Tabs defaultValue="all" className="w-full">
-            <TabsList className="w-full max-w-md mx-auto mb-8 bg-pink-50">
-              <TabsTrigger value="all" className="data-[state=active]:bg-pink-500 data-[state=active]:text-white">
-                All Work
-              </TabsTrigger>
-              <TabsTrigger value="nails" className="data-[state=active]:bg-pink-500 data-[state=active]:text-white">
-                Nails
-              </TabsTrigger>
-              <TabsTrigger value="lashes" className="data-[state=active]:bg-pink-500 data-[state=active]:text-white">
-                Lashes
-              </TabsTrigger>
-              <TabsTrigger value="makeup" className="data-[state=active]:bg-pink-500 data-[state=active]:text-white">
-                Makeup
-              </TabsTrigger>
-            </TabsList>
+          <TabsList className="w-full max-w-md mx-auto mb-8 bg-pink-50">
+            <TabsTrigger value="all" className="data-[state=active]:bg-pink-500 data-[state=active]:text-white">
+              All Work
+            </TabsTrigger>
+            <TabsTrigger value="nails" className="data-[state=active]:bg-pink-500 data-[state=active]:text-white">
+              Nails
+            </TabsTrigger>
+            <TabsTrigger value="lashes" className="data-[state=active]:bg-pink-500 data-[state=active]:text-white">
+              Lashes
+            </TabsTrigger>
+            <TabsTrigger value="makeup" className="data-[state=active]:bg-pink-500 data-[state=active]:text-white">
+              Makeup
+            </TabsTrigger>
+          </TabsList>
 
-            <TabsContent value="all" className="mt-0">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-                  <div key={i} className="group relative overflow-hidden rounded-xl aspect-square">
-                    <Image
-                      src={`/placeholder.svg?height=300&width=300&text=Gallery${i}`}
-                      alt={`Beauty work ${i}`}
-                      fill
-                      className="object-cover transition-transform duration-500 group-hover:scale-110"
+          <TabsContent value="all" className="mt-0">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {/* Display randomly combined items from all categories */}
+              {allImages.map((item) => (
+                <div key={`all-${item.id}`} className="group relative overflow-hidden rounded-xl aspect-square">
+                  <div className="absolute inset-0">
+                    <img
+                      src={item.src}
+                      data-fallback={item.fallback}
+                      alt={item.title}
+                      onError={handleImageError}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
-                      <p className="text-white font-medium">Beauty Service #{i}</p>
-                    </div>
                   </div>
-                ))}
-              </div>
-            </TabsContent>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
+                    <p className="text-white font-medium">{item.title}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </TabsContent>
 
-            <TabsContent value="nails" className="mt-0">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="group relative overflow-hidden rounded-xl aspect-square">
-                    <Image
-                      src={`/placeholder.svg?height=300&width=300&text=Nails${i}`}
-                      alt={`Nail design ${i}`}
-                      fill
-                      className="object-cover transition-transform duration-500 group-hover:scale-110"
+          <TabsContent value="nails" className="mt-0">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {galleryData.nails.map((item) => (
+                <div key={item.id} className="group relative overflow-hidden rounded-xl aspect-square">
+                  <div className="absolute inset-0">
+                    <img
+                      src={item.src}
+                      data-fallback={item.fallback}
+                      alt={item.title}
+                      onError={handleImageError}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
-                      <p className="text-white font-medium">Nail Design #{i}</p>
-                    </div>
                   </div>
-                ))}
-              </div>
-            </TabsContent>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
+                    <p className="text-white font-medium">{item.title}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </TabsContent>
 
-            <TabsContent value="lashes" className="mt-0">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="group relative overflow-hidden rounded-xl aspect-square">
-                    <Image
-                      src={`/placeholder.svg?height=300&width=300&text=Lashes${i}`}
-                      alt={`Lash extensions ${i}`}
-                      fill
-                      className="object-cover transition-transform duration-500 group-hover:scale-110"
+             <TabsContent value="lashes" className="mt-0">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {galleryData.lashes.map((item) => (
+                <div key={item.id} className="group relative overflow-hidden rounded-xl aspect-square">
+                  <div className="absolute inset-0">
+                    <img
+                      src={item.src}
+                      data-fallback={item.fallback}
+                      alt={item.title}
+                      onError={handleImageError}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
-                      <p className="text-white font-medium">Lash Extensions #{i}</p>
-                    </div>
                   </div>
-                ))}
-              </div>
-            </TabsContent>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
+                    <p className="text-white font-medium">{item.title}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </TabsContent>
 
-            <TabsContent value="makeup" className="mt-0">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="group relative overflow-hidden rounded-xl aspect-square">
-                    <Image
-                      src={`/placeholder.svg?height=300&width=300&text=Makeup${i}`}
-                      alt={`Makeup ${i}`}
-                      fill
-                      className="object-cover transition-transform duration-500 group-hover:scale-110"
+          <TabsContent value="makeup" className="mt-0">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {galleryData.makeup.map((item) => (
+                <div key={item.id} className="group relative overflow-hidden rounded-xl aspect-square">
+                  <div className="absolute inset-0">
+                    <img
+                      src={item.src}
+                      data-fallback={item.fallback}
+                      alt={item.title}
+                      onError={handleImageError}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
-                      <p className="text-white font-medium">Makeup #{i}</p>
-                    </div>
                   </div>
-                ))}
-              </div>
-            </TabsContent>
-          </Tabs>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
+                    <p className="text-white font-medium">{item.title}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </TabsContent>
+        </Tabs>
 
           <div className="text-center mt-10">
             <Button

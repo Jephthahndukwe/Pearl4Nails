@@ -100,8 +100,8 @@ export default function BookingSuccessPage() {
         referenceImage: searchParams.get('referenceImage'),
         location: "15 Osolo Way Off 7&8 bus stop, Ajao estate, Lagos, Nigeria",
         contact: {
-          email: "info@pearl4nails.com",
-          phone: "+2347000000000"
+          email: "pearl4nails@gmail.com",
+          phone: "09160763206"
         },
         preparation,
         appointmentId: searchParams.get('appointmentId') || 'AP123456'
@@ -471,7 +471,7 @@ export default function BookingSuccessPage() {
                     <div className="space-y-4">
                       <div className="flex items-center gap-2">
                         <Mail className="h-5 w-5 text-pink-500" />
-                        <p className="text-gray-600">nwabuezemercy2@gmail.com</p>
+                        <p className="text-gray-600">pearl4nails@gmail.com</p>
                       </div>
                       <div className="flex items-center gap-2">
                         <Phone className="h-5 w-5 text-pink-500" />

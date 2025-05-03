@@ -33,15 +33,13 @@ export const nailImages = [
 ]
 
 export const lashImages = [
-  "lashExtension.jpg",
-  "socialImage3.jpg",
-  "socialImage4.jpg"
+  "Lashextension2.png",
+  "Lashextension1.png"
 ]
 
 export const microbladingImages = [
-  "MicroBlading.jpg",
-  "socialImage.jpg",
-  "socialImage2.jpg"
+  "Microblading1.png",
+  "Microblading2.png"
 ]
 
 export const makeupImages = [

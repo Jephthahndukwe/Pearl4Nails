@@ -20,12 +20,22 @@ export default function GalleryPage() {
   ]
 
 // Create a consolidated array of all images for the "All Work" tab
-  const allImages = services.flatMap(service => 
+  const allImages = shuffleArray(
+  services.flatMap(service =>
     service.images.map(image => ({
       src: image,
       serviceName: service.name
     }))
   )
+);
+         
+function shuffleArray(array) {
+  return array
+    .map(value => ({ value, sort: Math.random() }))
+    .sort((a, b) => a.sort - b.sort)
+    .map(({ value }) => value);
+}
+
 
   return (
     <main className="min-h-screen py-16 px-4">

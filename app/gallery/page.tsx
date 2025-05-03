@@ -19,6 +19,14 @@ export default function GalleryPage() {
 //   { id: "tattoo", name: "Tattoo", images: tattooImages },
   ]
 
+// Create a consolidated array of all images for the "All Work" tab
+  const allImages = services.flatMap(service => 
+    service.images.map(image => ({
+      src: image,
+      serviceName: service.name
+    }))
+  )
+
   return (
     <main className="min-h-screen py-16 px-4">
       <div className="mx-auto lg:px-[50px] xs:px-2">
@@ -42,19 +50,19 @@ export default function GalleryPage() {
 
           <TabsContent value="all" className="xs:mt-[15%] sm:mt-[3%] lg:mt-[2%] md:mt-[%]">
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {services.map((service, serviceIndex) => (
-                <div key={service.id} className="relative aspect-square group">
+              {allImages.map((imageData, index) => (
+                <div key={`all-${index}`} className="relative aspect-square group">
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl"></div>
                   <div className="absolute inset-0 overflow-hidden rounded-2xl">
                     <Image
-                      src={`/images/${service.images[0]}`}
-                      alt={`${service.name} work`}
+                      src={`/images/${imageData.src}`}
+                      alt={`${imageData.serviceName} work`}
                       fill
                       className="object-cover transition-transform duration-300 group-hover:scale-105"
                     />
                   </div>
                   <div className="absolute bottom-4 left-4 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                    <h3 className="font-semibold">{service.name}</h3>
+                    <h3 className="font-semibold">{imageData.serviceName}</h3>
                   </div>
                 </div>
               ))}

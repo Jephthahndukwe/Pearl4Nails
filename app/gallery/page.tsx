@@ -102,7 +102,11 @@ export default function GalleryPage() {
 
           {services.map((service) => (
             <TabsContent key={service.id} value={service.id} className="xs:mt-[15%] lg:mt-[2%]">
-              <ImageGrid images={shuffleArray([...service.images])} serviceName={service.name} />
+              <ImageGrid 
+                images={shuffleArray([...service.images])}
+                serviceName={service.name}  
+                onImageClick={handleImageClick} 
+              />
             </TabsContent>
           ))}
         </Tabs>

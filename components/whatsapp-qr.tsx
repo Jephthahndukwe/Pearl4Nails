@@ -5,7 +5,7 @@ export default function WhatsAppQR() {
     <div className="flex flex-col items-center">
       <div className="border border-gray-200 rounded-lg bg-white shadow-md">
         <Image
-          src="/images/Whatsapp_qrcode.png?height=150&width=150&text=WhatsApp+QR"
+          src="/images/Whatsapp_qrcode.jpg?height=150&width=150&text=WhatsApp+QR"
           alt="WhatsApp QR Code"
           width={200}
           height={200}

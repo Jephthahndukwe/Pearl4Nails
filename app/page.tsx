@@ -46,11 +46,11 @@ export default function Home() {
   const avatars = [
     {
       id: 1,
-      name: 'avatar'
+      name: 'client1'
     },
     {
       id: 2,
-      name: 'avatar'
+      name: 'client2'
     },
     {
       id: 3,
@@ -190,7 +190,7 @@ export default function Home() {
                 {avatars.map((avatar) => (
                   <div key={avatar.id} className="w-10 h-10 rounded-full border-2 border-white overflow-hidden">
                     <Image
-                      src={`/images/${avatar.name}.png`}
+                      src={`/images/${avatar.name}.jpg`}
                       alt={`Happy client`}
                       width={40}
                       height={40}

@@ -10,8 +10,8 @@ export default function TestimonialSlider() {
   const testimonials = [
     {
       id: 1,
-      name: "Sarah Johnson",
-      image: "/images/avatar.png?height=96&width=96&text=Sarah",
+      name: " Nelly ijeoma",
+      image: "/images/client2.jpg?height=96&width=96&text=Sarah",
       role: "Regular Client",
       content:
         "I've been coming to Pearl4nails for over a year now and I'm always impressed with their work. The nail designs are creative and last for weeks. Highly recommend!",
@@ -19,8 +19,8 @@ export default function TestimonialSlider() {
     },
     {
       id: 2,
-      name: "Michelle Davis",
-      image: "/images/avatar.png?height=96&width=96&text=Michelle",
+      name: "Uche",
+      image: "/images/client1.jpg?height=96&width=96&text=Michelle",
       role: "First-time Client",
       content:
         "My first experience at Pearl4nails was amazing! The lash extensions looked so natural and the technician was very professional. Will definitely be back!",

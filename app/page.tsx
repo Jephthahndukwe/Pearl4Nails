@@ -54,11 +54,11 @@ export default function Home() {
     },
     {
       id: 3,
-      name: 'avatar'
+      name: 'client3'
     },
     {
       id: 4,
-      name: 'avatar'
+      name: 'client4'
     },
   ]
 

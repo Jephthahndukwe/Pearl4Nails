@@ -19,7 +19,7 @@ export default function TestimonialSlider() {
     },
     {
       id: 2,
-      name: "Uche",
+      name: "Rosemary Uche",
       image: "/images/client1.jpg?height=96&width=96&text=Michelle",
       role: "First-time Client",
       content:
@@ -28,8 +28,8 @@ export default function TestimonialSlider() {
     },
     {
       id: 3,
-      name: "Jessica Williams",
-      image: "/images/avatar.png?height=96&width=96&text=Jessica",
+      name: "Akobundu Precious",
+      image: "/images/client3.jpg?height=96&width=96&text=Jessica",
       role: "Regular Client",
       content:
         "The microblading service at Pearl4nails completely transformed my look. The attention to detail is incredible and the results are long-lasting.",

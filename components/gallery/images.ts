@@ -39,7 +39,8 @@ export const lashImages = [
 
 export const microbladingImages = [
   "Microblading1.png",
-  "Microblading2.png"
+  "Microblading2.png", 
+  "Microblading3.jpg"
 ]
 
 export const makeupImages = [

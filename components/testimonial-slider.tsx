@@ -42,7 +42,7 @@ export default function TestimonialSlider() {
       role: "Regular Client",
       content:
         "I love the tooth gems! They add such a unique touch to my smile. The application was quick and painless, and they've lasted much longer than I expected.",
-      rating: 4,
+      rating: 5,
     },
   ]
 

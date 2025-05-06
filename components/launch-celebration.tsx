@@ -113,7 +113,7 @@ export default function LaunchCelebration() {
               🎉 We’re Live! 🎉
             </h1>
             <p className="text-base sm:text-lg md:text-xl text-pink-800 font-medium">
-              Welcome to the all-new <span className="font-bold text-pink-700">Pearl4Nails</span> experience 💅✨
+              Welcome to the all new <span className="font-bold text-pink-700">Pearl4Nails</span> experience 💅✨
             </p>
           </motion.div>
         </motion.div>

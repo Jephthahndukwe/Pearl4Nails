@@ -15,7 +15,7 @@ export default function LaunchCelebration() {
         const confetti = module.default
         setConfettiLoaded(true)
 
-        const duration = 4 * 1000
+        const duration = 10 * 1000
         const end = Date.now() + duration
 
         const interval = setInterval(() => {
@@ -42,7 +42,7 @@ export default function LaunchCelebration() {
 
     const celebrationTimeout = setTimeout(() => {
       setShowCelebration(false)
-    }, 6000)
+    }, 11000)
 
     return () => {
       clearTimeout(celebrationTimeout)
@@ -64,7 +64,7 @@ export default function LaunchCelebration() {
           style={{ left: x }}
           initial={{ y: 0, opacity: 1 }}
           animate={{ y: -height, opacity: 0 }}
-          transition={{ duration: 6, delay }}
+          transition={{ duration: 10, delay }}
         >
           <div className="flex flex-col items-center space-y-[-4px]">
             {/* Balloon Body */}

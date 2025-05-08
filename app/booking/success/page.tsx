@@ -98,7 +98,7 @@ export default function BookingSuccessPage() {
         tattooLocation: searchParams.get('tattooLocation'),
         tattooSize: searchParams.get('tattooSize'),
         referenceImage: searchParams.get('referenceImage'),
-        location: "15 Osolo Way Off 7&8 bus stop, Ajao estate, Lagos, Nigeria",
+        location: searchParams.get('location') || "",
         contact: {
           email: "pearl4nails@gmail.com",
           phone: "09160763206"

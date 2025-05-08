@@ -36,7 +36,7 @@ export default function BookingPage() {
   const [selectedNailShape, setSelectedNailShape] = useState<string | null>(null)
   const [selectedNailDesign, setSelectedNailDesign] = useState<string | null>(null)
   const [referenceImage, setReferenceImage] = useState<string | null>(null)
-  const [selectedLocation, setSelectedLocation] = useState<'15 Osolo Way Off 7&8 bus stop, Ajao estate, Lagos, Nigeria' | '3, Salami Street, Mafoluku, Oshodi-Isolo'>('15 Osolo Way Off 7&8 bus stop, Ajao estate, Lagos, Nigeria')
+  const [selectedLocation, setSelectedLocation] = useState<string>('15 Osolo Way Off 7&8 bus stop, Ajao estate, Lagos, Nigeria')
   const [isBookingComplete, setIsBookingComplete] = useState(false)
   const [tattooLocation, setTattooLocation] = useState<string | null>(null)
   const [tattooSize, setTattooSize] = useState<string | null>(null)
@@ -220,6 +220,11 @@ export default function BookingPage() {
       if (selectedService === 'nails') {
         if (selectedNailShape) url.searchParams.set('nailShape', selectedNailShape);
         if (selectedNailDesign) url.searchParams.set('nailDesign', selectedNailDesign);
+      }
+      
+      // Add location parameter
+      if (selectedLocation) {
+        url.searchParams.set('location', selectedLocation);
       }
       
       if (selectedService === 'tattoo') {

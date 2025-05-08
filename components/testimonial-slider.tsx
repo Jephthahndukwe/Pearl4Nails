@@ -37,7 +37,7 @@ export default function TestimonialSlider() {
     },
     {
       id: 4,
-      name: "Amanda Brown",
+      name: "Temitope Olatunji",
       image: "/images/client4.jpg?height=96&width=96&text=Amanda",
       role: "Regular Client",
       content:

@@ -38,11 +38,11 @@ export default function TestimonialSlider() {
     {
       id: 4,
       name: "Amanda Brown",
-      image: "/images/avatar.png?height=96&width=96&text=Amanda",
+      image: "/images/client4.jpg?height=96&width=96&text=Amanda",
       role: "Regular Client",
       content:
         "I love the tooth gems! They add such a unique touch to my smile. The application was quick and painless, and they've lasted much longer than I expected.",
-      rating: 4,
+      rating: 5,
     },
   ]
 

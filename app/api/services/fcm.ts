@@ -27,10 +27,10 @@ export const sendPushNotification = async (bookingDetails: any) => {
     // Set message based on appointment status
     if (bookingDetails.status === 'cancelled') {
       message.title = 'Appointment Cancelled';
-      message.message = `Appointment for ${bookingDetails.service} on ${bookingDetails.date} at ${bookingDetails.time} has been cancelled\nCustomer: ${bookingDetails.customer.name}`;
+      message.message = `Appointment for ${bookingDetails.service} on ${bookingDetails.date} at ${bookingDetails.time} at ${bookingDetails.location} has been cancelled\nCustomer: ${bookingDetails.customer.name}`;
     } else {
       message.title = 'New Appointment Booked';
-      message.message = `New appointment for ${bookingDetails.service} on ${bookingDetails.date} at ${bookingDetails.time}\nCustomer: ${bookingDetails.customer.name}`;
+      message.message = `New appointment for ${bookingDetails.service} on ${bookingDetails.date} at ${bookingDetails.time} at ${bookingDetails.location}\nCustomer: ${bookingDetails.customer.name}`;
     }
 
     const response = await axios.post('https://api.pushover.net/1/messages.json', message);

@@ -36,6 +36,7 @@ export default function BookingPage() {
   const [selectedNailShape, setSelectedNailShape] = useState<string | null>(null)
   const [selectedNailDesign, setSelectedNailDesign] = useState<string | null>(null)
   const [referenceImage, setReferenceImage] = useState<string | null>(null)
+  const [selectedLocation, setSelectedLocation] = useState<'15 Osolo Way Off 7&8 bus stop, Ajao estate, Lagos, Nigeria' | '3, Salami Street, Mafoluku, Oshodi-Isolo'>('15 Osolo Way Off 7&8 bus stop, Ajao estate, Lagos, Nigeria')
   const [isBookingComplete, setIsBookingComplete] = useState(false)
   const [tattooLocation, setTattooLocation] = useState<string | null>(null)
   const [tattooSize, setTattooSize] = useState<string | null>(null)
@@ -186,7 +187,8 @@ export default function BookingPage() {
           nailDesign: selectedNailDesign || '',
           tattooLocation: tattooLocation || '',
           tattooSize: tattooSize || '',
-          referenceImage: referenceImage || ''
+          referenceImage: referenceImage || '',
+          location: selectedLocation
         }),
       });
 
@@ -834,6 +836,20 @@ export default function BookingPage() {
                   </div>
 
                   <div>
+                    <Label htmlFor="location">Preferred Location</Label>
+                    <select
+                      id="location"
+                      value={selectedLocation}
+                      onChange={(e) => setSelectedLocation(e.target.value as '3, Salami Street, Mafoluku, Oshodi-Isolo' | '15 Osolo Way Off 7&8 bus stop, Ajao estate, Lagos, Nigeria')}
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      required
+                    >
+                      <option value="15 Osolo Way Off 7&8 bus stop, Ajao estate, Lagos, Nigeria">15 Osolo Way Off 7&8 bus stop, Ajao estate, Lagos, Nigeria</option>
+                      <option value="3, Salami Street, Mafoluku, Oshodi-Isolo">3, Salami Street, Mafoluku, Oshodi-Isolo</option>
+                    </select>
+                  </div>
+
+                  <div>
                     <Label htmlFor="phone">Phone Number</Label>
                     <Input id="phone" placeholder="Enter your phone number" required />
                   </div>
@@ -854,6 +870,9 @@ export default function BookingPage() {
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <p className="text-gray-600">Service:</p>
                   <p>{findServiceById(selectedService || '')?.name || 'Not selected'}</p>
+
+                  <p className="text-gray-600">Location:</p>
+                  <p>{selectedLocation}</p>
 
                   <p className="text-gray-600">Date:</p>
                   <p>{date?.toLocaleDateString()}</p>

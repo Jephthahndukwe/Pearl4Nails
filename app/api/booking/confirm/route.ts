@@ -34,9 +34,9 @@ export async function POST(request: Request) {
       tattooLocation: data.tattooLocation || '',
       tattooSize: data.tattooSize || '',
       referenceImage: data.referenceImage || '',
-      location: "15 Osolo Way Off 7&8 bus stop, Ajao estate, Lagos, Nigeria",
+      location: data.location,
       contact: {
-        email: "nwabuezemercy2@gmail.com",
+        email: "pearl4nails@gmail.com",
         phone: "+234 916 076 3206"
       },
       preparation: [

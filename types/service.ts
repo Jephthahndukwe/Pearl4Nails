@@ -132,13 +132,33 @@ export const serviceCategories: ServiceCategory[] = [
     name: "Microblading",
     types: [
       {
-        id: "basic-microblading",
-        name: "Basic Microblading",
-        description: "Semi-permanent technique for natural looking eyebrows",
+        id: "microblading-basic",
+        name: "Microblading",
+        description: "Semi-permanent eyebrow enhancement with precise hair-like strokes",
         duration: "2 h",
-        price: "₦12,000"
+        price: "₦25,000"
+      },
+      {
+        id: "microshading-brows",
+        name: "Microshading Brows",
+        description: "Semi-permanent shading technique for fuller, more natural-looking eyebrows",
+        duration: "2 h",
+        price: "₦30,000"
+      },
+      {
+        id: "ombre-brows",
+        name: "Ombré-Brows",
+        description: "Gradient effect eyebrow enhancement with smooth color transition",
+        duration: "2 h",
+        price: "₦25,000"
+      },
+      {
+        id: "combination-brows",
+        name: "Combination Brows",
+        description: "Combination of microblading and microshading techniques for the perfect brow shape",
+        duration: "2 h 30 min",
+        price: "₦35,000"
       }
-      // Add more microblading types here
     ]
   },
   {

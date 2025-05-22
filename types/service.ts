@@ -142,21 +142,21 @@ export const serviceCategories: ServiceCategory[] = [
         id: "microshading-brows",
         name: "Microshading Brows",
         description: "Semi-permanent shading technique for fuller, more natural-looking eyebrows",
-        duration: "2 h",
+        duration: "2 h 30 mins",
         price: "₦30,000"
       },
       {
         id: "ombre-brows",
         name: "Ombré-Brows",
         description: "Gradient effect eyebrow enhancement with smooth color transition",
-        duration: "2 h",
-        price: "₦25,000"
+        duration: "3 h",
+        price: "₦30,000"
       },
       {
         id: "combination-brows",
         name: "Combination Brows",
         description: "Combination of microblading and microshading techniques for the perfect brow shape",
-        duration: "2 h 30 min",
+        duration: "3 h",
         price: "₦35,000"
       }
     ]

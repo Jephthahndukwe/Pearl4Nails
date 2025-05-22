@@ -850,7 +850,7 @@ export default function BookingPage() {
                       required
                     >
                       <option value="15 Osolo Way Off 7&8 bus stop, Ajao estate, Lagos, Nigeria">15 Osolo Way Off 7&8 bus stop, Ajao estate, Lagos, Nigeria</option>
-                      <option value="3, Salami Street, Mafoluku, Oshodi-Isolo">3, Salami Street, Mafoluku, Oshodi-Isolo</option>
+                      <option value="Iyana Ejigbo round at Munchiba tech, Lagos, Nigeria">Iyana Ejigbo round at Munchiba tech, Lagos, Nigeria</option>
                     </select>
                   </div>
 

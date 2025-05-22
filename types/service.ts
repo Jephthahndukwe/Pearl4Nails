@@ -263,11 +263,18 @@ export const serviceCategories: ServiceCategory[] = [
     id: "brow",
     name: "Brow Trimming",
     types: [
+       {
+        id: "brow-trimming",
+        name: "Brow Trimming",
+        description: "Professional brow trimming",
+        duration: "20 min",
+        price: "₦1,000"
+      }, 
       {
         id: "brow-shaping",
         name: "Brow Shaping",
-        description: "Professional brow shaping and trimming",
-        duration: "20 min",
+        description: "Professional brow shaping",
+        duration: "30 min",
         price: "₦2,000"
       }
       // Add more brow service types here

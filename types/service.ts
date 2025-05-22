@@ -214,13 +214,34 @@ export const serviceCategories: ServiceCategory[] = [
     id: "piercing",
     name: "Piercing",
     types: [
-      {
-        id: "ear-piercing",
-        name: "Ear Piercing",
-        description: "Professional ear piercing service",
-        duration: "30 min",
-        price: "₦3,000"
-      }
+  {
+    id: "earlobe-piercing",
+    name: "Earlobe Piercing",
+    description: "Professional earlobe piercing service",
+    duration: "30 min",
+    price: "₦5,000"
+  },
+  {
+    id: "nose-piercing",
+    name: "Nose Piercing",
+    description: "Professional nose piercing service",
+    duration: "30 min",
+    price: "₦7,000"
+  },
+  {
+    id: "helix-piercing",
+    name: "Helix Piercing",
+    description: "Professional helix piercing service",
+    duration: "40 min",
+    price: "₦10,000"
+  },
+  {
+    id: "tragus-piercing",
+    name: "Tragus Piercing",
+    description: "Professional tragus piercing service",
+    duration: "40 min",
+    price: "₦10,000"
+  }
       // Add more piercing types here
     ]
   },

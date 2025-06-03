@@ -1,80 +1,74 @@
+// app/api/test-db/route.ts
 import { NextResponse } from 'next/server';
-import { connectToDatabase } from '@/app/lib/mongodb';
+import { MongoClient } from 'mongodb';
 
-// Diagnostic endpoint to check database connection without exposing sensitive details
 export async function GET() {
+  const startTime = Date.now();
+  const requestId = Math.random().toString(36).substring(2, 8);
+  
+  const log = (message: string, data?: any) => {
+    console.log(`[${new Date().toISOString()}] [${requestId}] ${message}`, data || '');
+  };
+
   try {
-    console.log('Attempting to connect to MongoDB for diagnostic check...');
-    const startTime = Date.now();
+    const uri = process.env.MONGODB_URI;
     
-    // Try to connect to the database
-    const db = await connectToDatabase();
-    const endTime = Date.now();
-    const connectionTime = endTime - startTime;
-    
-    // Check if collections can be accessed
-    const collections = await db.listCollections().toArray();
-    const collectionNames = collections.map((c: any) => c.name);
-    
-    // Check appointments collection specifically
-    const appointmentCollectionExists = collectionNames.includes('appointments');
-    let appointmentStats = null;
-    
-    if (appointmentCollectionExists) {
-      const collection = db.collection('appointments');
-      // Get total count of appointments
-      const totalCount = await collection.countDocuments();
-      // Get count of confirmed appointments
-      const confirmedCount = await collection.countDocuments({ status: 'confirmed' });
-      // Get count by status
-      const statusCounts = await collection.aggregate([
-        { $group: { _id: '$status', count: { $sum: 1 } } }
-      ]).toArray();
-      
-      appointmentStats = {
-        totalCount,
-        confirmedCount,
-        statusCounts
-      };
+    if (!uri) {
+      throw new Error('MONGODB_URI is not defined in environment variables');
     }
-    
-    return NextResponse.json({
-      success: true,
-      environment: process.env.NODE_ENV,
-      connection: {
-        connected: true,
-        connectionTimeMs: connectionTime,
-        mongoDbUriDefined: !!process.env.MONGODB_URI,
-        // Don't expose the actual connection string
-        uriStart: process.env.MONGODB_URI 
-          ? `${process.env.MONGODB_URI.substring(0, 12)}...` 
-          : 'not defined'
-      },
-      collections: {
-        total: collections.length,
-        names: collectionNames,
-        appointmentCollectionExists
-      },
-      appointmentStats
+
+    log('Attempting to connect to MongoDB', { 
+      maskedUri: uri.replace(/(?<=mongodb\+srv:\/\/)([^:]+):([^@]+)/, '***:***')
     });
-  } catch (error: any) {
-    console.error('Diagnostic connection check failed:', error);
     
+    const client = new MongoClient(uri, {
+      connectTimeoutMS: 10000,
+      socketTimeoutMS: 30000,
+      serverSelectionTimeoutMS: 10000,
+      maxPoolSize: 1,
+      retryWrites: true,
+      retryReads: true,
+    });
+
+    try {
+      await client.connect();
+      const db = client.db('pearl4nails'); // Explicitly specify the database name
+      
+      // Test a simple findOne query instead of serverStatus
+      const testCollection = db.collection('appointments');
+      const testDoc = await testCollection.findOne({});
+      
+      // Also get collection names
+      const collections = await db.listCollections().toArray().catch(() => []);
+      
+      return NextResponse.json({
+        success: true,
+        connection: {
+          status: 'connected',
+          durationMs: Date.now() - startTime,
+          database: db.databaseName,
+          collections: collections.map((c: any) => c.name),
+          testDocument: testDoc ? 'Found a document' : 'No documents found'
+        }
+      });
+    } finally {
+      await client.close();
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    log('Database connection failed', { 
+      error: errorMessage,
+      stack: error instanceof Error ? error.stack : undefined
+    });
+
     return NextResponse.json({
       success: false,
-      environment: process.env.NODE_ENV,
-      error: {
-        message: error.message,
-        name: error.name,
-        // Don't include the full stack in the response
-        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-      },
-      connection: {
-        connected: false,
-        mongoDbUriDefined: !!process.env.MONGODB_URI,
-        uriStart: process.env.MONGODB_URI 
-          ? `${process.env.MONGODB_URI.substring(0, 12)}...` 
-          : 'not defined'
+      error: 'Failed to connect to MongoDB',
+      message: errorMessage,
+      meta: {
+        requestId,
+        timestamp: new Date().toISOString(),
+        durationMs: Date.now() - startTime
       }
     }, { status: 500 });
   }

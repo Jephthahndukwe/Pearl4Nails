@@ -5,12 +5,29 @@ import { sendCancellationEmail } from '@/app/api/services/email';
 
 export async function POST(request: Request) {
   try {
-    const { appointmentId } = await request.json();
+    // Log the raw request body for debugging
+    const requestBody = await request.text();
+    console.log('Raw request body:', requestBody);
+    
+    let requestData;
+    try {
+      requestData = JSON.parse(requestBody);
+    } catch (parseError) {
+      console.error('Failed to parse request body:', parseError);
+      return NextResponse.json(
+        { error: 'Invalid JSON in request body' },
+        { status: 400 }
+      );
+    }
+    
+    const { appointmentId } = requestData;
+    console.log('Extracted appointmentId:', appointmentId, 'Type:', typeof appointmentId);
 
     if (!appointmentId) {
       return NextResponse.json(
         { 
-          error: 'Appointment ID is required'
+          error: 'Appointment ID is required',
+          receivedData: requestData // Include received data for debugging
         },
         { status: 400 }
       );

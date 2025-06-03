@@ -12,31 +12,25 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Check, ChevronRight, Upload, Info, CalendarPlus, Clock } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
-import { serviceCategories, findServiceById, findServiceTypeById, type ServiceType } from "@/types/service"
+import { serviceCategories, findServiceById, findServiceTypeById } from "@/types/service"
 
 export default function BookingPage() {
   const [date, setDate] = useState<Date | undefined>(undefined)
   const [step, setStep] = useState(1)
-  const [selectedService, setSelectedService] = useState<string | null>(null)
-  const [selectedServiceType, setSelectedServiceType] = useState<string | null>(null)
-  const [selectedTime, setSelectedTime] = useState<string>('')
+
+  // Modified for multiple service selection
+  const [selectedServices, setSelectedServices] = useState<string[]>([])
+  const [selectedServiceTypes, setSelectedServiceTypes] = useState<Record<string, string>>({})
+  const [totalDuration, setTotalDuration] = useState<number>(0)
+
+  const [selectedTime, setSelectedTime] = useState<string>("")
   const [selectedNailShape, setSelectedNailShape] = useState<string | null>(null)
   const [selectedNailDesign, setSelectedNailDesign] = useState<string | null>(null)
   const [referenceImage, setReferenceImage] = useState<string | null>(null)
-  const [selectedLocation, setSelectedLocation] = useState<string>('15 Osolo Way Off 7&8 bus stop, Ajao estate, Lagos, Nigeria')
+  const [selectedLocation, setSelectedLocation] = useState<string>(
+    "15 Osolo Way Off 7&8 bus stop, Ajao estate, Lagos, Nigeria",
+  )
   const [isBookingComplete, setIsBookingComplete] = useState(false)
   const [tattooLocation, setTattooLocation] = useState<string | null>(null)
   const [tattooSize, setTattooSize] = useState<string | null>(null)
@@ -44,7 +38,7 @@ export default function BookingPage() {
   const [availableTimeSlots, setAvailableTimeSlots] = useState<{ time: string; isAvailable: boolean }[]>([])
   const [timeSlotsError, setTimeSlotsError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  
+
   // Service data is now imported from types/service.ts
 
   const nailShapes = [
@@ -65,70 +59,148 @@ export default function BookingPage() {
     { id: "Rhinestones", name: "Rhinestones" },
   ]
 
+  // Duration calculation functions
+  const calculateTotalDuration = (services: string[], serviceTypes: Record<string, string>) => {
+    let total = 0
+
+    Object.entries(serviceTypes).forEach(([serviceId, typeId]) => {
+      if (services.includes(serviceId)) {
+        const serviceType = findServiceTypeById(serviceId, typeId)
+        if (serviceType) {
+          const durationStr = serviceType.duration
+
+          // Handle various duration formats
+          // Format: "2 h 30 mins" or "1 h 30 min" or "45 min" or "1 h"
+          const hourMatch = durationStr.match(/(\d+)\s*h/)
+          const minuteMatch = durationStr.match(/(\d+)\s*min/)
+
+          if (hourMatch) {
+            total += Number.parseInt(hourMatch[1]) * 60 // Convert hours to minutes
+          }
+
+          if (minuteMatch) {
+            total += Number.parseInt(minuteMatch[1])
+          }
+        }
+      }
+    })
+
+    return total // Return total minutes
+  }
+
+  const formatDuration = (minutes: number) => {
+    const hours = Math.floor(minutes / 60)
+    const mins = minutes % 60
+
+    if (hours > 0 && mins > 0) {
+      return `${hours} hour${hours > 1 ? "s" : ""} ${mins} minute${mins > 1 ? "s" : ""}`
+    } else if (hours > 0) {
+      return `${hours} hour${hours > 1 ? "s" : ""}`
+    } else {
+      return `${mins} minute${mins > 1 ? "s" : ""}`
+    }
+  }
+
+  const getBlockedTimeSlots = (startTime: string, durationMinutes: number) => {
+    const [hourStr, minuteStr, period] = startTime.match(/(\d+):(\d+)\s*(AM|PM)/).slice(1)
+    let hour = Number.parseInt(hourStr)
+    const minute = Number.parseInt(minuteStr)
+
+    if (period === "PM" && hour < 12) hour += 12
+    if (period === "AM" && hour === 12) hour = 0
+
+    const startMinutes = hour * 60 + minute
+    const endMinutes = startMinutes + durationMinutes
+
+    return availableTimeSlots
+      .filter((slot) => {
+        const [slotHourStr, slotMinuteStr, slotPeriod] = slot.time.match(/(\d+):(\d+)\s*(AM|PM)/).slice(1)
+        let slotHour = Number.parseInt(slotHourStr)
+        const slotMinute = Number.parseInt(slotMinuteStr)
+
+        if (slotPeriod === "PM" && slotHour < 12) slotHour += 12
+        if (slotPeriod === "AM" && slotHour === 12) slotHour = 0
+
+        const slotMinutes = slotHour * 60 + slotMinute
+        return slotMinutes > startMinutes && slotMinutes < endMinutes
+      })
+      .map((slot) => slot.time)
+  }
+
   // Default time slots fallback for client-side when API fails
   const getDefaultTimeSlots = (selectedDate: Date) => {
-    const dayOfWeek = selectedDate.getDay(); // 0 for Sunday, 1 for Monday, etc.
-    
+    const dayOfWeek = selectedDate.getDay() // 0 for Sunday, 1 for Monday, etc.
+
     // Default business hours (9am to 8pm)
     const allTimeSlots = [
-      '09:00 AM', '10:00 AM', '11:00 AM', '12:00 PM',
-      '01:00 PM', '02:00 PM', '03:00 PM', '04:00 PM',
-      '05:00 PM', '06:00 PM', '07:00 PM', '08:00 PM'
-    ];
+      "09:00 AM",
+      "10:00 AM",
+      "11:00 AM",
+      "12:00 PM",
+      "01:00 PM",
+      "02:00 PM",
+      "03:00 PM",
+      "04:00 PM",
+      "05:00 PM",
+      "06:00 PM",
+      "07:00 PM",
+      "08:00 PM",
+    ]
 
     // Generate some random availability for fallback use
-    return allTimeSlots.map(time => ({
+    return allTimeSlots.map((time) => ({
       time,
       // Make some slots unavailable based on day of week as a pattern
-      isAvailable: !(dayOfWeek === 0 && ['09:00 AM', '10:00 AM'].includes(time)) && 
-                   !(dayOfWeek === 1 && ['07:00 PM', '08:00 PM'].includes(time)) &&
-                   !(Math.random() > 0.8) // Randomly make ~20% of slots unavailable
-    }));
-  };
+      isAvailable:
+        !(dayOfWeek === 0 && ["09:00 AM", "10:00 AM"].includes(time)) &&
+        !(dayOfWeek === 1 && ["07:00 PM", "08:00 PM"].includes(time)) &&
+        !(Math.random() > 0.8), // Randomly make ~20% of slots unavailable
+    }))
+  }
 
   useEffect(() => {
-    let isMounted = true;
+    let isMounted = true
 
     const fetchAvailableTimeSlots = async () => {
-      if (!date) return;
+      if (!date) return
 
       try {
         // Show loading state
-        setTimeSlotsError(null);
+        setTimeSlotsError(null)
 
         // Simple fetch with no race conditions or timeouts
         const response = await fetch(`/api/booking/available-time-slots?date=${date.toISOString()}&_=${Date.now()}`, {
-          method: 'GET',
-          cache: 'no-store',
+          method: "GET",
+          cache: "no-store",
           // Force network request to prevent browser caching
           headers: {
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma': 'no-cache',
-            'Expires': '0'
-          }
-        });
-        
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            Pragma: "no-cache",
+            Expires: "0",
+          },
+        })
+
         if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`Server error: ${response.status} - ${errorText}`);
+          const errorText = await response.text()
+          throw new Error(`Server error: ${response.status} - ${errorText}`)
         }
 
-        const data = await response.json();
-        
+        const data = await response.json()
+
         if (data.message) {
-          console.log('API message:', data.message);
+          console.log("API message:", data.message)
         }
-        
+
         if (isMounted) {
-          setAvailableTimeSlots(data.timeSlots || []);
-          setTimeSlotsError(data.message || null);
+          setAvailableTimeSlots(data.timeSlots || [])
+          setTimeSlotsError(data.message || null)
         }
       } catch (error) {
-        console.error('Error fetching time slots:', error);
-        
+        console.error("Error fetching time slots:", error)
+
         if (isMounted) {
-          setAvailableTimeSlots([]);
-          setTimeSlotsError('Could not load time slots. Please try again later.');
+          setAvailableTimeSlots([])
+          setTimeSlotsError("Could not load time slots. Please try again later.")
         }
       } finally {
         if (isMounted) {
@@ -136,148 +208,148 @@ export default function BookingPage() {
           // (No explicit loading state to set)
         }
       }
-    };
+    }
 
-    fetchAvailableTimeSlots();
-    
+    fetchAvailableTimeSlots()
+
     return () => {
-      isMounted = false;
-    };
-  }, [date]);
+      isMounted = false
+    }
+  }, [date])
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
+    e.preventDefault()
+    setIsSubmitting(true)
     try {
-      if (!selectedService || !date || !selectedTime) {
-        throw new Error('Please select service, date, and time');
+      if (selectedServices.length === 0 || !date || !selectedTime) {
+        throw new Error("Please select services, date, and time")
       }
 
-      const customerName = (document.getElementById('name') as HTMLInputElement)?.value || '';
-      const customerEmail = (document.getElementById('email') as HTMLInputElement)?.value || '';
-      const customerPhone = (document.getElementById('phone') as HTMLInputElement)?.value || '';
-      const customerNotes = (document.getElementById('notes') as HTMLTextAreaElement)?.value || '';
+      const customerName = (document.getElementById("name") as HTMLInputElement)?.value || ""
+      const customerEmail = (document.getElementById("email") as HTMLInputElement)?.value || ""
+      const customerPhone = (document.getElementById("phone") as HTMLInputElement)?.value || ""
+      const customerNotes = (document.getElementById("notes") as HTMLTextAreaElement)?.value || ""
 
-      const response = await fetch('/api/booking/confirm', {
-        method: 'POST',
+      const response = await fetch("/api/booking/confirm", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          service: selectedService,
-          serviceType: selectedServiceType,
-          serviceName: selectedService ? findServiceById(selectedService)?.name || '' : '',
-          serviceTypeName: selectedServiceType ? 
-            (selectedService && findServiceTypeById(selectedService, selectedServiceType)?.name) || '' : '',
-          servicePrice: selectedServiceType && selectedService ? 
-            (findServiceTypeById(selectedService, selectedServiceType)?.price) || '' : '',
-          serviceDuration: selectedServiceType && selectedService ? 
-            (findServiceTypeById(selectedService, selectedServiceType)?.duration) || '' : '',
-          date: date?.toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit'
+          services: selectedServices.map((serviceId) => ({
+            id: serviceId,
+            name: findServiceById(serviceId)?.name || "",
+            typeId: selectedServiceTypes[serviceId],
+            typeName: findServiceTypeById(serviceId, selectedServiceTypes[serviceId])?.name || "",
+            price: findServiceTypeById(serviceId, selectedServiceTypes[serviceId])?.price || "",
+            duration: findServiceTypeById(serviceId, selectedServiceTypes[serviceId])?.duration || "",
+          })),
+          totalDuration: formatDuration(totalDuration),
+          date: date?.toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
           }),
           time: selectedTime,
           name: customerName,
           email: customerEmail,
           phone: customerPhone,
           notes: customerNotes,
-          nailShape: selectedNailShape || '',
-          nailDesign: selectedNailDesign || '',
-          tattooLocation: tattooLocation || '',
-          tattooSize: tattooSize || '',
-          referenceImage: referenceImage || '',
-          location: selectedLocation
+          nailShape: selectedNailShape || "",
+          nailDesign: selectedNailDesign || "",
+          tattooLocation: tattooLocation || "",
+          tattooSize: tattooSize || "",
+          referenceImage: referenceImage || "",
+          location: selectedLocation,
         }),
-      });
+      })
 
-      const data = await response.json();
+      const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to confirm booking');
+        throw new Error(data.error || "Failed to confirm booking")
       }
 
       // Pass only appointment and service details to success page using URL search params - no customer info
-      const url = new URL('/booking/success', window.location.origin);
-      url.searchParams.set('appointmentId', data.appointmentId);
-      url.searchParams.set('service', selectedService || '');
-      url.searchParams.set('serviceType', selectedServiceType || '');
-      url.searchParams.set('date', date?.toLocaleDateString());
-      url.searchParams.set('time', selectedTime);
-      
-      // Add service type details to URL
-      if (selectedService && selectedServiceType) {
-        const serviceTypeInfo = findServiceTypeById(selectedService, selectedServiceType);
-        if (serviceTypeInfo) {
-          url.searchParams.set('serviceName', serviceTypeInfo.name);
-          url.searchParams.set('servicePrice', serviceTypeInfo.price);
-          url.searchParams.set('serviceDuration', serviceTypeInfo.duration);
-        }
-      }
-      
-      // Only pass service-specific details if provided
-      if (selectedService === 'nails') {
-        if (selectedNailShape) url.searchParams.set('nailShape', selectedNailShape);
-        if (selectedNailDesign) url.searchParams.set('nailDesign', selectedNailDesign);
-      }
-      
+      const url = new URL("/booking/success", window.location.origin)
+      url.searchParams.set("appointmentId", data.appointmentId)
+      url.searchParams.set("services", JSON.stringify(selectedServices))
+      url.searchParams.set("date", date?.toLocaleDateString())
+      url.searchParams.set("time", selectedTime)
+      url.searchParams.set("totalDuration", formatDuration(totalDuration))
+
       // Add location parameter
       if (selectedLocation) {
-        url.searchParams.set('location', selectedLocation);
+        url.searchParams.set("location", selectedLocation)
       }
-      
-      if (selectedService === 'tattoo') {
-        if (tattooLocation) url.searchParams.set('tattooLocation', tattooLocation);
-        if (tattooSize) url.searchParams.set('tattooSize', tattooSize);
+
+      if (selectedServices.includes("nails")) {
+        if (selectedNailShape) url.searchParams.set("nailShape", selectedNailShape)
+        if (selectedNailDesign) url.searchParams.set("nailDesign", selectedNailDesign)
       }
-      
-      if (referenceImage) url.searchParams.set('referenceImage', 'yes');
-      
-      window.location.href = url.toString();
+
+      if (selectedServices.includes("tattoo")) {
+        if (tattooLocation) url.searchParams.set("tattooLocation", tattooLocation)
+        if (tattooSize) url.searchParams.set("tattooSize", tattooSize)
+      }
+
+      if (referenceImage) url.searchParams.set("referenceImage", "yes")
+
+      window.location.href = url.toString()
     } catch (error) {
-      console.error('Error:', error);
-      alert(error instanceof Error ? error.message : 'Failed to confirm booking');
+      console.error("Error:", error)
+      alert(error instanceof Error ? error.message : "Failed to confirm booking")
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  };
+  }
 
   // Function to advance to the next step
   const nextStep = () => {
     // Only manually advance when Next button is clicked
-    if (step === 1 && selectedService) {
-      // If a service is selected, go to service type selection
-      setStep(2);
-    } else if (step === 2 && selectedServiceType) {
-      // If a service type is selected, go to date/time selection
-      setStep(3);
+    if (step === 1 && selectedServices.length > 0) {
+      // If services are selected, go to service type selection
+      setStep(2)
+    } else if (step === 2 && selectedServices.every((service) => selectedServiceTypes[service])) {
+      // If all service types are selected, go to date/time selection
+      setStep(3)
     } else {
-      setStep(step + 1);
+      setStep(step + 1)
     }
-    window.scrollTo(0, 0);
-  };
+    window.scrollTo(0, 0)
+  }
 
   const prevStep = () => {
     if (step === 2) {
       // If at service type selection, go back to service selection
-      setStep(1);
+      setStep(1)
     } else if (step === 3) {
       // If at date/time selection, go back to service type selection
-      setStep(2);
+      setStep(2)
     } else {
-      setStep(step - 1);
+      setStep(step - 1)
     }
-    window.scrollTo(0, 0);
-  };
+    window.scrollTo(0, 0)
+  }
 
   // Reset service type when changing service category
   useEffect(() => {
-    setSelectedServiceType(null);
-  }, [selectedService]);
+    // Clear service types that are no longer selected
+    const updatedServiceTypes = { ...selectedServiceTypes }
+    Object.keys(updatedServiceTypes).forEach((serviceId) => {
+      if (!selectedServices.includes(serviceId)) {
+        delete updatedServiceTypes[serviceId]
+      }
+    })
+    setSelectedServiceTypes(updatedServiceTypes)
+
+    // Recalculate duration
+    const newDuration = calculateTotalDuration(selectedServices, updatedServiceTypes)
+    setTotalDuration(newDuration)
+  }, [selectedServices])
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    const file = e.target.files?.[0]
     if (file) {
       const reader = new FileReader()
       reader.onloadend = () => {
@@ -295,40 +367,53 @@ export default function BookingPage() {
   }
 
   const handleCancel = async () => {
-    if (!window.confirm('Are you sure you want to cancel this appointment?')) {
-      return;
+    if (!window.confirm("Are you sure you want to cancel this appointment?")) {
+      return
     }
 
     try {
-      const response = await fetch('/api/booking/cancel', {
-        method: 'POST',
+      const response = await fetch("/api/booking/cancel", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify({ appointmentId: '12345' }), // Replace with actual appointment ID
-      });
+        body: JSON.stringify({ appointmentId: "12345" }), // Replace with actual appointment ID
+      })
 
-      const data = await response.json();
+      const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.details || 'Failed to cancel booking');
+        throw new Error(data.details || "Failed to cancel booking")
       }
 
-      alert('Appointment cancelled successfully');
-      window.location.href = '/booking/cancelled';
+      alert("Appointment cancelled successfully")
+      window.location.href = "/booking/cancelled"
     } catch (error) {
-      console.error('Cancellation failed:', error);
-      alert(error instanceof Error ? error.message : 'An error occurred while cancelling. Please try again later.');
+      console.error("Cancellation failed:", error)
+      alert(error instanceof Error ? error.message : "An error occurred while cancelling. Please try again later.")
     }
-  };
+  }
 
   const handleTimeSlotClick = (time: string, isAvailable: boolean) => {
     if (isAvailable) {
-      setSelectedTime(time);
+      // Check if there are enough consecutive available slots for the total duration
+      const blockedSlots = getBlockedTimeSlots(time, totalDuration)
+      const unavailableBlockedSlot = blockedSlots.find(
+        (slot) => !availableTimeSlots.find((ts) => ts.time === slot)?.isAvailable,
+      )
+
+      if (unavailableBlockedSlot) {
+        alert(
+          `This appointment requires ${formatDuration(totalDuration)} and would conflict with an existing booking at ${unavailableBlockedSlot}. Please select a different time.`,
+        )
+        return
+      }
+
+      setSelectedTime(time)
     } else {
-      alert('This time slot is already booked');
+      alert("This time slot is already booked")
     }
-  };
+  }
 
   if (isBookingComplete) {
     return (
@@ -346,10 +431,17 @@ export default function BookingPage() {
             <div className="bg-pink-50 rounded-lg p-6 mb-8">
               <h2 className="font-bold text-pink-500 mb-4 text-xl">Appointment Details</h2>
               <div className="grid grid-cols-2 gap-4 text-sm">
-                <p className="text-gray-600">Service:</p>
-                <p className="font-medium">
-                  {services.find((s) => s.id === selectedService)?.name}
-                </p>
+                <p className="text-gray-600">Services:</p>
+                <div>
+                  {selectedServices.map((serviceId) => {
+                    const service = findServiceById(serviceId)
+                    return (
+                      <p key={serviceId} className="font-medium">
+                        {service?.name}
+                      </p>
+                    )
+                  })}
+                </div>
 
                 <p className="text-gray-600">Date:</p>
                 <p className="font-medium">{date?.toLocaleDateString()}</p>
@@ -357,32 +449,31 @@ export default function BookingPage() {
                 <p className="text-gray-600">Time:</p>
                 <p className="font-medium">{selectedTime}</p>
 
-                {selectedService === "nails" && selectedNailShape && (
+                <p className="text-gray-600">Duration:</p>
+                <p className="font-medium">{formatDuration(totalDuration)}</p>
+
+                {selectedServices.includes("nails") && selectedNailShape && (
                   <>
                     <p className="text-gray-600">Nail Shape:</p>
-                    <p className="font-medium">
-                      {nailShapes.find((s) => s.id === selectedNailShape)?.name}
-                    </p>
+                    <p className="font-medium">{nailShapes.find((s) => s.id === selectedNailShape)?.name}</p>
                   </>
                 )}
 
-                {selectedService === "nails" && selectedNailDesign && (
+                {selectedServices.includes("nails") && selectedNailDesign && (
                   <>
                     <p className="text-gray-600">Nail Design:</p>
-                    <p className="font-medium">
-                      {nailDesigns.find((d) => d.id === selectedNailDesign)?.name}
-                    </p>
+                    <p className="font-medium">{nailDesigns.find((d) => d.id === selectedNailDesign)?.name}</p>
                   </>
                 )}
 
-                {selectedService === "tattoo" && tattooLocation && (
+                {selectedServices.includes("tattoo") && tattooLocation && (
                   <>
                     <p className="text-gray-600">Tattoo Location:</p>
                     <p className="font-medium">{tattooLocation}</p>
                   </>
                 )}
 
-                {selectedService === "tattoo" && tattooSize && (
+                {selectedServices.includes("tattoo") && tattooSize && (
                   <>
                     <p className="text-gray-600">Tattoo Size:</p>
                     <p className="font-medium">{tattooSize}</p>
@@ -431,12 +522,12 @@ export default function BookingPage() {
       <div className="max-w-4xl mx-auto">
         <h1 className="text-4xl font-bold text-center text-pink-500 mb-6">Book Your Appointment</h1>
         <p className="text-center text-gray-700 max-w-2xl mx-auto mb-12">
-          Select your preferred service, date, and time, and we'll take care of the rest.
+          Select your preferred services, date, and time, and we'll take care of the rest.
         </p>
 
         <div className="mb-8">
           <div className="flex justify-between items-center mb-6">
-            {[1, 2, 3, 4].map((i) => (
+            {[1, 2, 3, 4, 5].map((i) => (
               <div
                 key={i}
                 className={`flex items-center ${i < step ? "text-pink-500" : i === step ? "text-pink-500" : "text-gray-400"}`}
@@ -456,12 +547,12 @@ export default function BookingPage() {
                   {i === 1
                     ? "Service"
                     : i === 2
-                      ? "Date & Time"
+                      ? "Service Type"
                       : i === 3
-                        ? "Customization"
+                        ? "Date & Time"
                         : i === 4
-                          ? "Details"
-                          : "Payment"}
+                          ? "Customization"
+                          : "Details"}
                 </span>
               </div>
             ))}
@@ -471,20 +562,23 @@ export default function BookingPage() {
         <form onSubmit={handleSubmit}>
           {step === 1 && (
             <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-              <h2 className="text-2xl font-bold text-pink-500 mb-6">Select a Service Category</h2>
+              <h2 className="text-2xl font-bold text-pink-500 mb-6">Select Service Categories</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
                 {serviceCategories.map((category) => (
                   <div
                     key={category.id}
-                    className={`border rounded-lg p-4 cursor-pointer transition-all ${selectedService === category.id
-                      ? "border-pink-500 bg-pink-50"
-                      : "border-gray-200 hover:border-pink-300"
-                      }`}
+                    className={`border rounded-lg p-4 cursor-pointer transition-all ${
+                      selectedServices.includes(category.id)
+                        ? "border-pink-500 bg-pink-50"
+                        : "border-gray-200 hover:border-pink-300"
+                    }`}
                     onClick={() => {
-                      // Only update the selection without advancing to next step
-                      setSelectedService(category.id);
-                      // Reset service type when changing service category
-                      setSelectedServiceType(null);
+                      // Toggle service selection
+                      if (selectedServices.includes(category.id)) {
+                        setSelectedServices(selectedServices.filter((id) => id !== category.id))
+                      } else {
+                        setSelectedServices([...selectedServices, category.id])
+                      }
                     }}
                   >
                     <div className="flex justify-between items-center">
@@ -493,20 +587,38 @@ export default function BookingPage() {
                         <p className="text-gray-500 text-sm">{category.types.length} services available</p>
                       </div>
                       <div
-                        className={`w-5 h-5 rounded-full border ${selectedService === category.id ? "border-pink-500 bg-pink-500" : "border-gray-300"
-                          }`}
+                        className={`w-5 h-5 rounded-full border ${
+                          selectedServices.includes(category.id) ? "border-pink-500 bg-pink-500" : "border-gray-300"
+                        }`}
                       >
-                        {selectedService === category.id && <Check className="w-4 h-4 text-white" />}
+                        {selectedServices.includes(category.id) && <Check className="w-4 h-4 text-white" />}
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
+
+              {selectedServices.length > 0 && (
+                <div className="mb-6 bg-pink-50 p-4 rounded-lg">
+                  <h3 className="font-medium text-pink-500 mb-2">Selected Services</h3>
+                  <div className="space-y-1">
+                    {selectedServices.map((serviceId) => {
+                      const service = findServiceById(serviceId)
+                      return (
+                        <div key={serviceId} className="flex justify-between items-center">
+                          <p className="font-medium">{service?.name}</p>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
               <div className="flex justify-end">
                 <Button
                   type="button"
                   onClick={nextStep}
-                  disabled={!selectedService}
+                  disabled={selectedServices.length === 0}
                   className="bg-pink-500 hover:bg-pink-600"
                 >
                   Next <ChevronRight className="ml-2 h-4 w-4" />
@@ -514,60 +626,83 @@ export default function BookingPage() {
               </div>
             </div>
           )}
-          
-          {step === 2 && selectedService && (
+
+          {step === 2 && selectedServices.length > 0 && (
             <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-              <h2 className="text-2xl font-bold text-pink-500 mb-6">
-                Select {findServiceById(selectedService)?.name} Service
-              </h2>
-              <div className="grid grid-cols-1 gap-4 mb-8">
-                {findServiceById(selectedService)?.types.map((type) => (
-                  <div
-                    key={type.id}
-                    className={`border rounded-lg p-4 cursor-pointer transition-all ${selectedServiceType === type.id
-                      ? "border-pink-500 bg-pink-50"
-                      : "border-gray-200 hover:border-pink-300"
-                      }`}
-                    onClick={() => {
-                      // Only update the selection without advancing to next step
-                      setSelectedServiceType(type.id);
-                    }}
-                  >
-                    <div className="flex flex-col sm:flex-row justify-between">
-                      <div className="flex-1">
-                        <h3 className="font-medium text-lg">{type.name}</h3>
-                        <p className="text-gray-600 text-sm mt-1">{type.description}</p>
-                      </div>
-                      <div className="flex items-center gap-4 mt-2 sm:mt-0">
-                        <div className="flex items-center text-gray-500">
-                          <Clock className="w-4 h-4 mr-1" />
-                          <span className="text-sm">{type.duration}</span>
-                        </div>
-                        <p className="font-bold text-pink-500">{type.price}</p>
+              <h2 className="text-2xl font-bold text-pink-500 mb-6">Select Service Types</h2>
+
+              {selectedServices.map((serviceId) => {
+                const service = findServiceById(serviceId)
+                return (
+                  <div key={serviceId} className="mb-8">
+                    <h3 className="text-xl font-medium mb-4">{service?.name}</h3>
+                    <div className="grid grid-cols-1 gap-4">
+                      {service?.types.map((type) => (
                         <div
-                          className={`w-5 h-5 rounded-full border ${selectedServiceType === type.id ? "border-pink-500 bg-pink-500" : "border-gray-300"
-                            }`}
+                          key={type.id}
+                          className={`border rounded-lg p-4 cursor-pointer transition-all ${
+                            selectedServiceTypes[serviceId] === type.id
+                              ? "border-pink-500 bg-pink-50"
+                              : "border-gray-200 hover:border-pink-300"
+                          }`}
+                          onClick={() => {
+                            const updatedServiceTypes = { ...selectedServiceTypes }
+                            updatedServiceTypes[serviceId] = type.id
+                            setSelectedServiceTypes(updatedServiceTypes)
+
+                            // Calculate new total duration
+                            const newDuration = calculateTotalDuration(selectedServices, updatedServiceTypes)
+                            setTotalDuration(newDuration)
+                          }}
                         >
-                          {selectedServiceType === type.id && <Check className="w-4 h-4 text-white" />}
+                          <div className="flex flex-col sm:flex-row justify-between">
+                            <div className="flex-1">
+                              <h4 className="font-medium text-lg">{type.name}</h4>
+                              <p className="text-gray-600 text-sm mt-1">{type.description}</p>
+                            </div>
+                            <div className="flex items-center gap-4 mt-2 sm:mt-0">
+                              <div className="flex items-center text-gray-500">
+                                <Clock className="w-4 h-4 mr-1" />
+                                <span className="text-sm">{type.duration}</span>
+                              </div>
+                              <p className="font-bold text-pink-500">{type.price}</p>
+                              <div
+                                className={`w-5 h-5 rounded-full border ${
+                                  selectedServiceTypes[serviceId] === type.id
+                                    ? "border-pink-500 bg-pink-500"
+                                    : "border-gray-300"
+                                }`}
+                              >
+                                {selectedServiceTypes[serviceId] === type.id && (
+                                  <Check className="w-4 h-4 text-white" />
+                                )}
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                      </div>
+                      ))}
                     </div>
                   </div>
-                ))}
-              </div>
+                )
+              })}
+
+              {totalDuration > 0 && (
+                <div className="mt-6 mb-4 bg-pink-50 p-4 rounded-lg">
+                  <div className="flex justify-between items-center">
+                    <p className="font-medium text-pink-500">Total Duration:</p>
+                    <p className="font-bold text-pink-600">{formatDuration(totalDuration)}</p>
+                  </div>
+                </div>
+              )}
+
               <div className="flex justify-between">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={prevStep}
-                  className="border-pink-500 text-pink-500"
-                >
+                <Button type="button" variant="outline" onClick={prevStep} className="border-pink-500 text-pink-500">
                   Back
                 </Button>
                 <Button
                   type="button"
                   onClick={nextStep}
-                  disabled={!selectedServiceType}
+                  disabled={selectedServices.some((service) => !selectedServiceTypes[service])}
                   className="bg-pink-500 hover:bg-pink-600"
                 >
                   Next <ChevronRight className="ml-2 h-4 w-4" />
@@ -597,32 +732,74 @@ export default function BookingPage() {
                 </div>
                 <div>
                   <h3 className="font-medium mb-4">Select a Time</h3>
+                  {totalDuration > 0 && (
+                    <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+                      <p className="text-sm text-blue-700">
+                        <Clock className="w-4 h-4 inline mr-1" />
+                        Your appointment will take {formatDuration(totalDuration)}
+                      </p>
+                    </div>
+                  )}
                   <div className="grid grid-cols-2 gap-2">
                     {timeSlotsError ? (
                       <div className="col-span-2 text-red-500 text-center">{timeSlotsError}</div>
                     ) : (
-                      availableTimeSlots.map((slot) => (
-                        <div
-                          key={slot.time}
-                          className={`border rounded-lg p-3 text-center cursor-pointer transition-all relative ${
-                            selectedTime === slot.time
-                              ? 'border-pink-500 bg-pink-50 text-pink-600'
-                              : slot.isAvailable 
-                                ? 'hover:bg-gray-50'
-                                : 'bg-gray-200 cursor-not-allowed'
-                          } ${
-                            !slot.isAvailable &&
-                            'opacity-75 filter blur-sm'
-                          }`}
-                          onClick={() => handleTimeSlotClick(slot.time, slot.isAvailable)}
-                          style={{
-                            pointerEvents: !slot.isAvailable ? 'none' : 'auto'
-                          }}
-                          title={slot.isAvailable ? undefined : 'This time slot is already booked'}
-                        >
-                          {slot.time.split(":")[0].padStart(2, "0")}:{slot.time.split(":")[1].padStart(2, "0")}
-                        </div>
-                      ))
+                      availableTimeSlots.map((slot) => {
+                        const isBlocked =
+                          selectedTime && getBlockedTimeSlots(selectedTime, totalDuration).includes(slot.time)
+
+                        // Safe time parsing with fallback
+                        const timeDisplay = slot.time
+                          ? (() => {
+                              try {
+                                const timeParts = slot.time.split(":")
+                                if (timeParts.length >= 2) {
+                                  const hour = timeParts[0].padStart(2, "0")
+                                  const minutePart = timeParts[1].split(" ")[0].padStart(2, "0")
+                                  return `${hour}:${minutePart}`
+                                }
+                                return slot.time
+                              } catch (e) {
+                                return slot.time || "Invalid Time"
+                              }
+                            })()
+                          : "Invalid Time"
+
+                        return (
+                          <div
+                            key={slot.time || Math.random()}
+                            className={`border rounded-lg p-3 text-center cursor-pointer transition-all relative ${
+                              selectedTime === slot.time
+                                ? "border-pink-500 bg-pink-50 text-pink-600"
+                                : isBlocked
+                                  ? "border-pink-200 bg-pink-50 text-pink-300"
+                                  : slot.isAvailable
+                                    ? "hover:bg-gray-50"
+                                    : "bg-gray-200 cursor-not-allowed"
+                            } ${!slot.isAvailable && "opacity-75 filter blur-sm"}`}
+                            onClick={() => handleTimeSlotClick(slot.time, slot.isAvailable)}
+                            style={{
+                              pointerEvents: !slot.isAvailable ? "none" : "auto",
+                            }}
+                            title={
+                              selectedTime === slot.time
+                                ? "Selected start time"
+                                : isBlocked
+                                  ? "This slot will be part of your appointment"
+                                  : slot.isAvailable
+                                    ? undefined
+                                    : "This time slot is already booked"
+                            }
+                          >
+                            {timeDisplay}
+                            {isBlocked && (
+                              <span className="absolute inset-0 flex items-center justify-center text-xs">
+                                Part of appointment
+                              </span>
+                            )}
+                          </div>
+                        )
+                      })
                     )}
                   </div>
                 </div>
@@ -645,9 +822,9 @@ export default function BookingPage() {
 
           {step === 4 && (
             <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-              <h2 className="text-2xl font-bold text-pink-500 mb-6">Customize Your Service</h2>
+              <h2 className="text-2xl font-bold text-pink-500 mb-6">Customize Your Services</h2>
 
-              {selectedService === "nails" && (
+              {selectedServices.includes("nails") && (
                 <div className="mb-8">
                   <Tabs defaultValue="shape" className="w-full">
                     <TabsList className="grid w-full grid-cols-2">
@@ -679,7 +856,7 @@ export default function BookingPage() {
                           >
                             <div className="aspect-square relative mb-2">
                               <Image
-                                src={`/images/${shape.id}.jpg`}
+                                src={`/images/${shape.name}.jpg`}
                                 alt={shape.name}
                                 fill
                                 className="object-cover rounded"
@@ -720,38 +897,40 @@ export default function BookingPage() {
                 </div>
               )}
 
-              {selectedService === "tattoo" && (
+              {selectedServices.includes("tattoo") && (
                 <div className="mb-8">
-                  <div>
-                    <Label htmlFor="tattoo-location">Tattoo Location</Label>
-                    <select
-                      id="tattoo-location"
-                      value={tattooLocation}
-                      onChange={(e) => setTattooLocation(e.target.value)}
-                      className="w-full p-2 border rounded-md"
-                    >
-                      <option value="">Select location</option>
-                      <option value="arm">Arm</option>
-                      <option value="leg">Leg</option>
-                      <option value="back">Back</option>
-                      <option value="chest">Chest</option>
-                      <option value="other">Other</option>
-                    </select>
-                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="tattoo-location">Tattoo Location</Label>
+                      <select
+                        id="tattoo-location"
+                        value={tattooLocation || ""}
+                        onChange={(e) => setTattooLocation(e.target.value)}
+                        className="w-full p-2 border rounded-md"
+                      >
+                        <option value="">Select location</option>
+                        <option value="arm">Arm</option>
+                        <option value="leg">Leg</option>
+                        <option value="back">Back</option>
+                        <option value="chest">Chest</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
 
-                  <div>
-                    <Label htmlFor="tattoo-size">Tattoo Size</Label>
-                    <select
-                      id="tattoo-size"
-                      value={tattooSize}
-                      onChange={(e) => setTattooSize(e.target.value)}
-                      className="w-full p-2 border rounded-md"
-                    >
-                      <option value="">Select size</option>
-                      <option value="small">Small (up to 3 inches)</option>
-                      <option value="medium">Medium (3-6 inches)</option>
-                      <option value="large">Large (6+ inches)</option>
-                    </select>
+                    <div>
+                      <Label htmlFor="tattoo-size">Tattoo Size</Label>
+                      <select
+                        id="tattoo-size"
+                        value={tattooSize || ""}
+                        onChange={(e) => setTattooSize(e.target.value)}
+                        className="w-full p-2 border rounded-md"
+                      >
+                        <option value="">Select size</option>
+                        <option value="small">Small (up to 3 inches)</option>
+                        <option value="medium">Medium (3-6 inches)</option>
+                        <option value="large">Large (6+ inches)</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
               )}
@@ -764,7 +943,7 @@ export default function BookingPage() {
                     <div className="space-y-4">
                       <div className="relative w-full h-48 mx-auto">
                         <Image
-                          src={referenceImage || "/placeholder.svg"}
+                          src={referenceImage || "/placeholder.svg?height=200&width=300"}
                           alt="Reference"
                           fill
                           className="object-contain rounded"
@@ -804,7 +983,7 @@ export default function BookingPage() {
                 </div>
               </div>
 
-              {selectedService !== "nails" && selectedService !== "tattoo" && (
+              {!selectedServices.includes("nails") && !selectedServices.includes("tattoo") && (
                 <div className="mb-8 p-6 bg-pink-50 rounded-lg">
                   <p className="text-gray-700">
                     Our technician will discuss your preferences during your appointment. If you have any specific
@@ -845,12 +1024,16 @@ export default function BookingPage() {
                     <select
                       id="location"
                       value={selectedLocation}
-                      onChange={(e) => setSelectedLocation(e.target.value as '3, Salami Street, Mafoluku, Oshodi-Isolo' | '15 Osolo Way Off 7&8 bus stop, Ajao estate, Lagos, Nigeria')}
+                      onChange={(e) => setSelectedLocation(e.target.value)}
                       className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                       required
                     >
-                      <option value="15 Osolo Way Off 7&8 bus stop, Ajao estate, Lagos, Nigeria">15 Osolo Way Off 7&8 bus stop, Ajao estate, Lagos, Nigeria</option>
-                      <option value="Iyana Ejigbo round at Munchiba tech, Lagos, Nigeria">Iyana Ejigbo round at Munchiba tech, Lagos, Nigeria</option>
+                      <option value="15 Osolo Way Off 7&8 bus stop, Ajao estate, Lagos, Nigeria">
+                        15 Osolo Way Off 7&8 bus stop, Ajao estate, Lagos, Nigeria
+                      </option>
+                      <option value="Iyana Ejigbo round at Munchiba tech, Lagos, Nigeria">
+                        Iyana Ejigbo round at Munchiba tech, Lagos, Nigeria
+                      </option>
                     </select>
                   </div>
 
@@ -873,8 +1056,28 @@ export default function BookingPage() {
               <div className="bg-pink-50 rounded-lg p-4 mb-8">
                 <h3 className="font-bold text-pink-500 mb-2">Booking Summary</h3>
                 <div className="grid grid-cols-2 gap-2 text-sm">
-                  <p className="text-gray-600">Service:</p>
-                  <p>{findServiceById(selectedService || '')?.name || 'Not selected'}</p>
+                  <p className="text-gray-600">Services:</p>
+                  <div>
+                    {selectedServices.map((serviceId) => {
+                      const service = findServiceById(serviceId)
+                      const serviceType = selectedServiceTypes[serviceId]
+                        ? findServiceTypeById(serviceId, selectedServiceTypes[serviceId])
+                        : null
+                      return (
+                        <div key={serviceId}>
+                          <p className="font-medium">{service?.name}</p>
+                          {serviceType && (
+                            <p className="text-xs text-gray-500">
+                              {serviceType.name} - {serviceType.duration}
+                            </p>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+
+                  <p className="text-gray-600">Total Duration:</p>
+                  <p className="font-medium">{formatDuration(totalDuration)}</p>
 
                   <p className="text-gray-600">Location:</p>
                   <p>{selectedLocation}</p>
@@ -885,28 +1088,28 @@ export default function BookingPage() {
                   <p className="text-gray-600">Time:</p>
                   <p>{selectedTime}</p>
 
-                  {selectedService === "nails" && selectedNailShape && (
+                  {selectedServices.includes("nails") && selectedNailShape && (
                     <>
                       <p className="text-gray-600">Nail Shape:</p>
                       <p>{nailShapes.find((s) => s.id === selectedNailShape)?.name}</p>
                     </>
                   )}
 
-                  {selectedService === "nails" && selectedNailDesign && (
+                  {selectedServices.includes("nails") && selectedNailDesign && (
                     <>
                       <p className="text-gray-600">Nail Design:</p>
                       <p>{nailDesigns.find((d) => d.id === selectedNailDesign)?.name}</p>
                     </>
                   )}
 
-                  {selectedService === "tattoo" && tattooLocation && (
+                  {selectedServices.includes("tattoo") && tattooLocation && (
                     <>
                       <p className="text-gray-600">Tattoo Location:</p>
                       <p>{tattooLocation}</p>
                     </>
                   )}
 
-                  {selectedService === "tattoo" && tattooSize && (
+                  {selectedServices.includes("tattoo") && tattooSize && (
                     <>
                       <p className="text-gray-600">Tattoo Size:</p>
                       <p>{tattooSize}</p>
@@ -939,12 +1142,8 @@ export default function BookingPage() {
                 <Button type="button" variant="outline" onClick={prevStep} className="border-pink-500 text-pink-500">
                   Back
                 </Button>
-                <Button
-                  type="submit"
-                  className="bg-pink-500 hover:bg-pink-600"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? 'Booking...' : 'Complete Booking'}
+                <Button type="submit" className="bg-pink-500 hover:bg-pink-600" disabled={isSubmitting}>
+                  {isSubmitting ? "Booking..." : "Complete Booking"}
                 </Button>
               </div>
             </div>
@@ -952,5 +1151,5 @@ export default function BookingPage() {
         </form>
       </div>
     </main>
-  );
+  )
 }

@@ -1,55 +1,64 @@
-import { NextResponse } from 'next/server';
-import { createAppointment } from '@/app/api/services/appointment';
+import { NextResponse, NextRequest } from 'next/server';
+import { v4 as uuidv4 } from 'uuid';
 
-export async function POST(request: Request) {
+export async function POST(req: NextRequest) {
   try {
-    const data = await request.json();
-    
-    // Validate required fields
-    const requiredFields = ['service', 'date', 'time', 'name', 'email', 'phone'];
-    for (const field of requiredFields) {
-      if (!data[field]) {
-        return NextResponse.json({ error: `Missing required field: ${field}` }, { status: 400 });
-      }
+    const appointmentData = await req.json();
+
+    if (!appointmentData) {
+      return new NextResponse("No appointment data provided", { status: 400 });
     }
 
-    // Create appointment
-    const appointment = await createAppointment({
-      service: data.service,
-      serviceType: data.serviceType,
-      serviceName: data.serviceName,
-      serviceTypeName: data.serviceTypeName,
-      servicePrice: data.servicePrice,
-      serviceDuration: data.serviceDuration,
-      date: data.date,
-      time: data.time,
-      customer: {
-        name: data.name,
-        email: data.email,
-        phone: data.phone,
-        notes: data.notes || ''
-      },
-      nailShape: data.nailShape || '',
-      nailDesign: data.nailDesign || '',
-      tattooLocation: data.tattooLocation || '',
-      tattooSize: data.tattooSize || '',
-      referenceImage: data.referenceImage || '',
-      location: data.location,
-      contact: {
-        email: "pearl4nails@gmail.com",
-        phone: "+234 916 076 3206"
-      },
-      preparation: [
-        "Please arrive 15 minutes early for your appointment",
-        "Avoid wearing nail polish on the day of your appointment",
-        "Bring any reference images you would like to show",
-        "Feel free to bring your own nail art inspiration"
-      ]
-    });
+    const appointmentId = uuidv4();
+    const appointmentDate = new Date(appointmentData.date);
 
-    return NextResponse.json(appointment);
+    // Format the date into various formats for searching and display
+    const dateFormats = {
+      YYYYMMDD: appointmentDate.toISOString().slice(0, 10).replace(/-/g, ""), //YYYYMMDD
+      MMDDYYYY: `${String(appointmentDate.getMonth() + 1).padStart(2, '0')}${String(appointmentDate.getDate()).padStart(2, '0')}${appointmentDate.getFullYear()}`, // MMDDYYYY
+      DDMMYYYY: `${String(appointmentDate.getDate()).padStart(2, '0')}${String(appointmentDate.getMonth() + 1).padStart(2, '0')}${appointmentDate.getFullYear()}`, // DDMMYYYY
+    };
+
+    const formattedDate = `${String(appointmentDate.getMonth() + 1).padStart(2, '0')}/${String(appointmentDate.getDate()).padStart(2, '0')}/${appointmentDate.getFullYear()}`;
+
+    // Format the appointment data for storage and notifications
+    const appointment = {
+      ...appointmentData,
+      appointmentId,
+      // Map services to the format expected by notification services
+      services: appointmentData.services ? appointmentData.services.map((service: any) => ({
+        serviceName: service.name,
+        serviceTypeName: service.typeName,
+        servicePrice: service.price,
+        serviceDuration: service.duration,
+        // Keep original properties for compatibility
+        ...service
+      })) : [],
+      totalDuration: appointmentData.totalDuration || "",
+      date: formattedDate, // Primary date format (MM/DD/YYYY)
+      dateFormats: dateFormats, // Store all formats to ensure we can find it later
+      status: "confirmed",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      environment: process.env.NODE_ENV || "unknown",
+      // Format customer data for existing notification services
+      customer: {
+        name: appointmentData.name,
+        email: appointmentData.email,
+        phone: appointmentData.phone,
+        notes: appointmentData.notes,
+      },
+    }
+
+    // TODO: Implement database storage here (e.g., MongoDB, Supabase, etc.)
+    // Example: await db.collection('appointments').insertOne(appointment);
+    console.log("Appointment Data (Simulated DB Storage):", appointment);
+
+    // Return the appointment details, including the new appointmentId
+    return NextResponse.json({ appointment }, { status: 201 });
+
   } catch (error) {
-    console.error('Error in booking confirmation:', error);
-    return NextResponse.json({ error: error instanceof Error ? error.message : 'Failed to confirm booking' }, { status: 500 });
+    console.error("Error processing appointment confirmation:", error);
+    return new NextResponse("Internal Server Error", { status: 500 });
   }
 }

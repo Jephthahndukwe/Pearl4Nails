@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Check, CalendarPlus, Share2, ExternalLink, MapPin, Mail, Phone, Clock, Info, AlertCircle, Trash2, Loader2 } from "lucide-react"
+import { Check, CalendarPlus, Share2, MapPin, Mail, Phone, Info, Trash2, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
-import { CalendarEvent } from "@/types/calendar"
+import type { CalendarEvent } from "@/types/calendar"
 import { addEventToCalendar } from "@/lib/calendar"
 import { toast } from "sonner"
 import {
@@ -18,112 +18,141 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { useRouter } from 'next/navigation';
+import { useRouter } from "next/navigation"
+
+interface ServiceDetails {
+  serviceName: string
+  serviceTypeName: string
+  servicePrice?: string
+  serviceDuration?: string
+}
 
 interface BookingDetails {
-  service: string;
-  serviceType?: string;
-  serviceName?: string;
-  serviceTypeName?: string;
-  servicePrice?: string;
-  serviceDuration?: string;
-  date: string;
-  time: string;
-  nailShape?: string | null;
-  nailDesign?: string | null;
-  tattooLocation?: string | null;
-  tattooSize?: string | null;
-  referenceImage?: string | null;
-  location: string;
+  service?: string
+  serviceType?: string
+  serviceName?: string
+  serviceTypeName?: string
+  servicePrice?: string
+  serviceDuration?: string
+  services?: ServiceDetails[]
+  totalDuration?: string
+  date: string
+  time: string
+  nailShape?: string | null
+  nailDesign?: string | null
+  tattooLocation?: string | null
+  tattooSize?: string | null
+  referenceImage?: string | null
+  location: string
   contact: {
-    email: string;
-    phone: string;
-  };
-  preparation: string[];
-  appointmentId: string;
+    email: string
+    phone: string
+  }
+  preparation: string[]
+  appointmentId: string
 }
 
 export default function BookingSuccessPage() {
-  const [bookingDetails, setBookingDetails] = useState<BookingDetails | null>(null);
-  const [isSharing, setIsSharing] = useState(false);
-  const [isAddingToCalendar, setIsAddingToCalendar] = useState(false);
-  const [isCancelling, setIsCancelling] = useState(false);
-  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
+  const [bookingDetails, setBookingDetails] = useState<BookingDetails | null>(null)
+  const [isSharing, setIsSharing] = useState(false)
+  const [isAddingToCalendar, setIsAddingToCalendar] = useState(false)
+  const [isCancelling, setIsCancelling] = useState(false)
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const router = useRouter()
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const searchParams = new URLSearchParams(window.location.search);
-      const service = searchParams.get('service');
-      const status = searchParams.get('status');
-      
+    if (typeof window !== "undefined") {
+      const searchParams = new URLSearchParams(window.location.search)
+      const service = searchParams.get("service")
+      const status = searchParams.get("status")
+
       // If appointment is cancelled, redirect to cancelled page
-      if (status === 'cancelled') {
-        router.push('/booking/cancelled');
-        return;
+      if (status === "cancelled") {
+        router.push("/booking/cancelled")
+        return
       }
 
-      const preparation = service === 'nails' 
-        ? [
-            "Please arrive 15 minutes early for your appointment",
-            "Make sure your nails are clean and dry",
-            "Avoid wearing nail polish if you have natural nails",
-            "Bring any reference images you would like to show"
-          ]
-        : service === 'tattoo'
-        ? [
-            "Please arrive 15 minutes early for your appointment",
-            "Make sure the area is clean and shaved if necessary",
-            "Avoid wearing tight clothing over the tattoo area",
-            "Bring any reference images you would like to show"
-          ]
-        : [
-            "Please arrive 15 minutes early for your appointment",
-            "Make sure you're comfortable with the service",
-            "Feel free to bring any reference images you would like to show"
-          ];
+      const preparation =
+        service === "nails"
+          ? [
+              "Please arrive 15 minutes early for your appointment",
+              "Make sure your nails are clean and dry",
+              "Avoid wearing nail polish if you have natural nails",
+              "Bring any reference images you would like to show",
+            ]
+          : service === "tattoo"
+            ? [
+                "Please arrive 15 minutes early for your appointment",
+                "Make sure the area is clean and shaved if necessary",
+                "Avoid wearing tight clothing over the tattoo area",
+                "Bring any reference images you would like to show",
+              ]
+            : [
+                "Please arrive 15 minutes early for your appointment",
+                "Make sure you're comfortable with the service",
+                "Feel free to bring any reference images you would like to show",
+              ]
+
+      // Check if we have multiple services
+      let services: ServiceDetails[] = []
+      let hasMultipleServices = false
+
+      try {
+        // Try to parse services from URL params
+        const servicesParam = searchParams.get("services")
+        if (servicesParam) {
+          services = JSON.parse(decodeURIComponent(servicesParam))
+          hasMultipleServices = services.length > 0
+        }
+      } catch (error) {
+        console.error("Error parsing services:", error)
+      }
 
       const details: BookingDetails = {
-        service: searchParams.get('service') || 'Service',
-        serviceType: searchParams.get('serviceType') || undefined,
-        serviceName: searchParams.get('serviceName') || undefined,
-        serviceTypeName: searchParams.get('serviceTypeName') || undefined,
-        servicePrice: searchParams.get('servicePrice') || undefined,
-        serviceDuration: searchParams.get('serviceDuration') || undefined,
-        date: searchParams.get('date') || 'Date',
-        time: searchParams.get('time') || 'Time',
-        nailShape: searchParams.get('nailShape'),
-        nailDesign: searchParams.get('nailDesign'),
-        tattooLocation: searchParams.get('tattooLocation'),
-        tattooSize: searchParams.get('tattooSize'),
-        referenceImage: searchParams.get('referenceImage'),
-        location: searchParams.get('location') || "",
+        service: searchParams.get("service") || "Service",
+        serviceType: searchParams.get("serviceType") || undefined,
+        serviceName: searchParams.get("serviceName") || undefined,
+        serviceTypeName: searchParams.get("serviceTypeName") || undefined,
+        servicePrice: searchParams.get("servicePrice") || undefined,
+        serviceDuration: searchParams.get("serviceDuration") || undefined,
+        services: hasMultipleServices ? services : undefined,
+        totalDuration: searchParams.get("totalDuration") || undefined,
+        date: searchParams.get("date") || "Date",
+        time: searchParams.get("time") || "Time",
+        nailShape: searchParams.get("nailShape"),
+        nailDesign: searchParams.get("nailDesign"),
+        tattooLocation: searchParams.get("tattooLocation"),
+        tattooSize: searchParams.get("tattooSize"),
+        referenceImage: searchParams.get("referenceImage"),
+        location: searchParams.get("location") || "",
         contact: {
           email: "pearl4nails@gmail.com",
-          phone: "09160763206"
+          phone: "09160763206",
         },
         preparation,
-        appointmentId: searchParams.get('appointmentId') || 'AP123456'
-      };
+        appointmentId: searchParams.get("appointmentId") || "AP123456",
+      }
 
       // Set booking details to state
-      setBookingDetails(details);
-      
+      setBookingDetails(details)
+
       // Log for debugging - no sensitive info
       console.log("Appointment details loaded", {
         service: details.service,
         date: details.date,
         time: details.time,
-        appointmentId: details.appointmentId
-      });
+        appointmentId: details.appointmentId,
+        hasMultipleServices,
+        services: details.services,
+      })
 
       // Redirect if user tries to access success page without booking
-      if (!details.service || !details.date || !details.time || !details.appointmentId) {
-        router.push('/booking');
+      if (!details.date || !details.time || !details.appointmentId) {
+        router.push("/booking")
       }
     }
-  }, [router]);
+  }, [router])
 
   if (!bookingDetails) {
     return (
@@ -133,17 +162,56 @@ export default function BookingSuccessPage() {
           <p className="text-gray-600">Loading your appointment details...</p>
         </div>
       </div>
-    );
+    )
   }
 
   const handleAddToCalendar = async () => {
     setIsAddingToCalendar(true)
     try {
+      // Create title based on whether we have multiple services or a single service
+      let title = "Pearl4Nails - "
+      let description = ""
+
+      if (bookingDetails.services && bookingDetails.services.length > 0) {
+        // Multiple services
+        title += bookingDetails.services.map((s) => s.serviceTypeName).join(", ")
+        description = `Services:\n${bookingDetails.services
+          .map(
+            (s) =>
+              `- ${s.serviceName} - ${s.serviceTypeName}${s.servicePrice ? ` (${s.servicePrice})` : ""}${s.serviceDuration ? ` (${s.serviceDuration})` : ""}`,
+          )
+          .join("\n")}`
+
+        if (bookingDetails.totalDuration) {
+          description += `\nTotal Duration: ${bookingDetails.totalDuration}`
+        }
+      } else {
+        // Single service
+        title += bookingDetails.serviceTypeName || bookingDetails.serviceName || bookingDetails.service
+        description = `Service: ${bookingDetails.serviceTypeName || bookingDetails.serviceName || bookingDetails.service}${bookingDetails.servicePrice ? `\nPrice: ${bookingDetails.servicePrice}` : ""}${bookingDetails.serviceDuration ? `\nDuration: ${bookingDetails.serviceDuration}` : ""}`
+      }
+
+      description += `\nLocation: ${bookingDetails.location}\nContact: ${bookingDetails.contact.email}`
+
+      // Calculate end time based on total duration or service duration
+      let durationMinutes = 90 // Default 90 minutes
+      if (bookingDetails.totalDuration) {
+        const match = bookingDetails.totalDuration.match(/(\d+)/)
+        if (match) {
+          durationMinutes = Number.parseInt(match[1])
+        }
+      } else if (bookingDetails.serviceDuration) {
+        const match = bookingDetails.serviceDuration.match(/(\d+)/)
+        if (match) {
+          durationMinutes = Number.parseInt(match[1])
+        }
+      }
+
       const event: CalendarEvent = {
-        title: `Pearl4Nails - ${bookingDetails.serviceTypeName || bookingDetails.serviceName || bookingDetails.service}`,
-        description: `Service: ${bookingDetails.serviceTypeName || bookingDetails.serviceName || bookingDetails.service}${bookingDetails.servicePrice ? `\nPrice: ${bookingDetails.servicePrice}` : ''}${bookingDetails.serviceDuration ? `\nDuration: ${bookingDetails.serviceDuration}` : ''}\nLocation: ${bookingDetails.location}\nContact: ${bookingDetails.contact.email}`,
+        title,
+        description,
         start: new Date(`${bookingDetails.date} ${bookingDetails.time}`),
-        end: new Date(new Date(`${bookingDetails.date} ${bookingDetails.time}`).getTime() + (bookingDetails.serviceDuration ? parseInt(bookingDetails.serviceDuration) : 90) * 60000) // Use service duration or default to 90 minutes
+        end: new Date(new Date(`${bookingDetails.date} ${bookingDetails.time}`).getTime() + durationMinutes * 60000),
       }
 
       const result = await addEventToCalendar(event)
@@ -153,7 +221,7 @@ export default function BookingSuccessPage() {
         toast.error("Failed to add appointment to calendar")
       }
     } catch (error) {
-      console.error('Error adding to calendar:', error)
+      console.error("Error adding to calendar:", error)
       toast.error("Failed to add appointment to calendar")
     } finally {
       setIsAddingToCalendar(false)
@@ -163,24 +231,48 @@ export default function BookingSuccessPage() {
   const handleShare = async () => {
     setIsSharing(true)
     try {
-      const text = `I have an appointment at Pearl4Nails!\n\nService: ${bookingDetails.serviceTypeName || bookingDetails.serviceName || bookingDetails.service}${bookingDetails.servicePrice ? `\nPrice: ${bookingDetails.servicePrice}` : ''}${bookingDetails.serviceDuration ? `\nDuration: ${bookingDetails.serviceDuration}` : ''}\nDate: ${bookingDetails.date}\nTime: ${bookingDetails.time}\nLocation: ${bookingDetails.location}\n\nLooking forward to it! 🎉`
-      
+      let servicesText = ""
+
+      if (bookingDetails.services && bookingDetails.services.length > 0) {
+        // Multiple services
+        servicesText =
+          "Services:\n" +
+          bookingDetails.services
+            .map(
+              (s, index) =>
+                `${index + 1}. ${s.serviceName} - ${s.serviceTypeName}${s.servicePrice ? ` (${s.servicePrice})` : ""}${s.serviceDuration ? ` (${s.serviceDuration})` : ""}`,
+            )
+            .join("\n")
+
+        if (bookingDetails.totalDuration) {
+          servicesText += `\nTotal Duration: ${bookingDetails.totalDuration}`
+        }
+      } else {
+        // Single service
+        servicesText = `Service: ${bookingDetails.serviceTypeName || bookingDetails.serviceName || bookingDetails.service}${bookingDetails.servicePrice ? `\nPrice: ${bookingDetails.servicePrice}` : ""}${bookingDetails.serviceDuration ? `\nDuration: ${bookingDetails.serviceDuration}` : ""}`
+      }
+
+      const text = `I have an appointment at Pearl4Nails!\n\n${servicesText}\nDate: ${bookingDetails.date}\nTime: ${bookingDetails.time}\nLocation: ${bookingDetails.location}\n\nLooking forward to it! 🎉`
+
       if (navigator.share) {
         await navigator.share({
           title: "My Pearl4Nails Appointment",
           text: text,
-          url: window.location.href
+          url: window.location.href,
         })
       } else {
-        navigator.clipboard.writeText(text).then(() => {
-          toast.success("Appointment details copied to clipboard!")
-        }).catch((err) => {
-          console.error('Failed to copy:', err)
-          toast.error("Failed to copy appointment details")
-        })
+        navigator.clipboard
+          .writeText(text)
+          .then(() => {
+            toast.success("Appointment details copied to clipboard!")
+          })
+          .catch((err) => {
+            console.error("Failed to copy:", err)
+            toast.error("Failed to copy appointment details")
+          })
       }
     } catch (error) {
-      console.error('Error sharing:', error)
+      console.error("Error sharing:", error)
       toast.error("Failed to share appointment")
     } finally {
       setIsSharing(false)
@@ -188,42 +280,95 @@ export default function BookingSuccessPage() {
   }
 
   const handleCancel = () => {
-    setIsCancelModalOpen(true);
-  };
+    setIsCancelModalOpen(true)
+  }
 
   const handleCancelAppointment = async () => {
     try {
-      setIsLoading(true);
-      setIsCancelModalOpen(false);
+      setIsLoading(true)
+      setIsCancelModalOpen(false)
 
-      const response = await fetch('/api/booking/cancel', {
-        method: 'POST',
+      const response = await fetch("/api/booking/cancel", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ appointmentId: bookingDetails.appointmentId }),
-      });
+      })
 
-      const data = await response.json();
+      const data = await response.json()
 
       if (data.success) {
         // Redirect to cancelled page
-        window.location.href = data.redirectUrl;
+        window.location.href = data.redirectUrl
       } else {
-        throw new Error(data.error);
+        throw new Error(data.error)
       }
     } catch (error) {
-      console.error('Error cancelling appointment:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to cancel appointment');
+      console.error("Error cancelling appointment:", error)
+      toast.error(error instanceof Error ? error.message : "Failed to cancel appointment")
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
+
+  // Render services section based on whether we have multiple services or a single service
+  const renderServicesSection = () => {
+    if (bookingDetails.services && bookingDetails.services.length > 0) {
+      // Multiple services
+      return (
+        <>
+          <p className="text-gray-600">Services:</p>
+          <div className="font-medium">
+            <ul className="list-disc pl-5">
+              {bookingDetails.services.map((service, index) => (
+                <li key={index}>
+                  {service.serviceName} - {service.serviceTypeName}
+                  {service.servicePrice && ` (${service.servicePrice})`}
+                  {service.serviceDuration && ` (${service.serviceDuration})`}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {bookingDetails.totalDuration && (
+            <>
+              <p className="text-gray-600">Total Duration:</p>
+              <p className="font-medium">{bookingDetails.totalDuration}</p>
+            </>
+          )}
+        </>
+      )
+    } else {
+      // Single service
+      return (
+        <>
+          <p className="text-gray-600">Service:</p>
+          <p className="font-medium">
+            {bookingDetails.serviceTypeName || bookingDetails.serviceName || bookingDetails.service}
+          </p>
+
+          {bookingDetails.servicePrice && (
+            <>
+              <p className="text-gray-600">Price:</p>
+              <p className="font-medium">{bookingDetails.servicePrice}</p>
+            </>
+          )}
+
+          {bookingDetails.serviceDuration && (
+            <>
+              <p className="text-gray-600">Duration:</p>
+              <p className="font-medium">{bookingDetails.serviceDuration}</p>
+            </>
+          )}
+        </>
+      )
+    }
+  }
 
   return (
     <main className="min-h-screen py-16 px-4">
       <div className="max-w-4xl mx-auto">
-        
         <div className="bg-white rounded-xl p-8 shadow-md border border-gray-100">
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
@@ -233,74 +378,59 @@ export default function BookingSuccessPage() {
             <p className="text-gray-600">Your appointment has been successfully booked.</p>
           </div>
 
-            {/* Appointment Details - Only show service info, no personal details */}
-            <div className="bg-pink-50 rounded-lg p-6 mb-8">
-              <h2 className="font-bold text-pink-500 mb-4 text-xl">Appointment Details</h2>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <p className="text-gray-600">Service:</p>
-                <p className="font-medium">{bookingDetails.serviceTypeName || bookingDetails.serviceName || bookingDetails.service}</p>
-                
-                {bookingDetails.servicePrice && (
-                  <>
-                    <p className="text-gray-600">Price:</p>
-                    <p className="font-medium">{bookingDetails.servicePrice}</p>
-                  </>
-                )}
-                
-                {bookingDetails.serviceDuration && (
-                  <>
-                    <p className="text-gray-600">Duration:</p>
-                    <p className="font-medium">{bookingDetails.serviceDuration}</p>
-                  </>
-                )}
+          {/* Appointment Details - Only show service info, no personal details */}
+          <div className="bg-pink-50 rounded-lg p-6 mb-8">
+            <h2 className="font-bold text-pink-500 mb-4 text-xl">Appointment Details</h2>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              {renderServicesSection()}
 
-                <p className="text-gray-600">Date:</p>
-                <p className="font-medium">{bookingDetails.date}</p>
+              <p className="text-gray-600">Date:</p>
+              <p className="font-medium">{bookingDetails.date}</p>
 
-                <p className="text-gray-600">Time:</p>
-                <p className="font-medium">{bookingDetails.time}</p>
+              <p className="text-gray-600">Time:</p>
+              <p className="font-medium">{bookingDetails.time}</p>
 
-                {/* Show nail details only if provided and for nail services */}
-                {bookingDetails.service === 'nails' && bookingDetails.nailShape && (
-                  <>
-                    <p className="text-gray-600">Nail Shape:</p>
-                    <p className="font-medium">{bookingDetails.nailShape}</p>
-                  </>
-                )}
+              {/* Show nail details only if provided and for nail services */}
+              {bookingDetails.service === "nails" && bookingDetails.nailShape && (
+                <>
+                  <p className="text-gray-600">Nail Shape:</p>
+                  <p className="font-medium">{bookingDetails.nailShape}</p>
+                </>
+              )}
 
-                {bookingDetails.service === 'nails' && bookingDetails.nailDesign && (
-                  <>
-                    <p className="text-gray-600">Nail Design:</p>
-                    <p className="font-medium">{bookingDetails.nailDesign}</p>
-                  </>
-                )}
+              {bookingDetails.service === "nails" && bookingDetails.nailDesign && (
+                <>
+                  <p className="text-gray-600">Nail Design:</p>
+                  <p className="font-medium">{bookingDetails.nailDesign}</p>
+                </>
+              )}
 
-                {/* Show tattoo details only if provided and for tattoo services */}
-                {bookingDetails.service === 'tattoo' && bookingDetails.tattooLocation && (
-                  <>
-                    <p className="text-gray-600">Tattoo Location:</p>
-                    <p className="font-medium">{bookingDetails.tattooLocation}</p>
-                  </>
-                )}
+              {/* Show tattoo details only if provided and for tattoo services */}
+              {bookingDetails.service === "tattoo" && bookingDetails.tattooLocation && (
+                <>
+                  <p className="text-gray-600">Tattoo Location:</p>
+                  <p className="font-medium">{bookingDetails.tattooLocation}</p>
+                </>
+              )}
 
-                {bookingDetails.service === 'tattoo' && bookingDetails.tattooSize && (
-                  <>
-                    <p className="text-gray-600">Tattoo Size:</p>
-                    <p className="font-medium">{bookingDetails.tattooSize}</p>
-                  </>
-                )}
+              {bookingDetails.service === "tattoo" && bookingDetails.tattooSize && (
+                <>
+                  <p className="text-gray-600">Tattoo Size:</p>
+                  <p className="font-medium">{bookingDetails.tattooSize}</p>
+                </>
+              )}
 
-                {/* Show reference image if uploaded */}
-                {bookingDetails.referenceImage && (
-                  <>
-                    <p className="text-gray-600">Reference Image:</p>
-                    <p className="font-medium text-green-600">Uploaded ✓</p>
-                  </>
-                )}
-              </div>
+              {/* Show reference image if uploaded */}
+              {bookingDetails.referenceImage && (
+                <>
+                  <p className="text-gray-600">Reference Image:</p>
+                  <p className="font-medium text-green-600">Uploaded ✓</p>
+                </>
+              )}
             </div>
-            
-            {/* No customer details displayed for privacy reasons */}
+          </div>
+
+          {/* No customer details displayed for privacy reasons */}
 
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -310,15 +440,11 @@ export default function BookingSuccessPage() {
                 disabled={isAddingToCalendar}
               >
                 <CalendarPlus className="h-4 w-4" />
-                {isAddingToCalendar ? 'Adding to Calendar...' : 'Add to Calendar'}
+                {isAddingToCalendar ? "Adding to Calendar..." : "Add to Calendar"}
               </Button>
-              <Button
-                variant="outline"
-                onClick={handleShare}
-                disabled={isSharing}
-              >
+              <Button variant="outline" onClick={handleShare} disabled={isSharing}>
                 <Share2 className="h-4 w-4" />
-                {isSharing ? 'Sharing...' : 'Share Appointment'}
+                {isSharing ? "Sharing..." : "Share Appointment"}
               </Button>
               <Button
                 variant="outline"
@@ -327,7 +453,7 @@ export default function BookingSuccessPage() {
                 className="text-red-500 hover:text-red-600"
               >
                 <Trash2 className="h-4 w-4" />
-                {isCancelling ? 'Cancelling...' : 'Cancel Appointment'}
+                {isCancelling ? "Cancelling..." : "Cancel Appointment"}
               </Button>
               <Button variant="outline" asChild>
                 <Link href="/" className="flex items-center gap-2">
@@ -347,10 +473,18 @@ export default function BookingSuccessPage() {
                   <div className="bg-white p-4 rounded-lg">
                     <h4 className="font-medium mb-2">Payment Details</h4>
                     <div className="space-y-2">
-                      <p className="text-sm">Account Name: <span className='font-bold'>Mercy Ezinne Nwabueze</span></p>
-                      <p className="text-sm">Account Number: <span className='font-bold'>9160763206</span></p>
-                      <p className="text-sm">Bank: <span className='font-bold'>Opay Digital Service Limited</span></p>
-                      <p className="text-sm">Reference: <span className='font-bold'>Your Name + Appointment Date</span></p>
+                      <p className="text-sm">
+                        Account Name: <span className="font-bold">Mercy Ezinne Nwabueze</span>
+                      </p>
+                      <p className="text-sm">
+                        Account Number: <span className="font-bold">9160763206</span>
+                      </p>
+                      <p className="text-sm">
+                        Bank: <span className="font-bold">Opay Digital Service Limited</span>
+                      </p>
+                      <p className="text-sm">
+                        Reference: <span className="font-bold">Your Name + Appointment Date</span>
+                      </p>
                     </div>
                   </div>
                   <p className="text-sm text-yellow-600">
@@ -407,8 +541,8 @@ export default function BookingSuccessPage() {
                           specifically for your appointment, ensuring we can provide you with the best possible service.
                         </li>
                         <li>
-                          <strong>Commitment:</strong> The deposit serves as a commitment to your appointment, helping us
-                          maintain a reliable schedule for all our clients.
+                          <strong>Commitment:</strong> The deposit serves as a commitment to your appointment, helping
+                          us maintain a reliable schedule for all our clients.
                         </li>
                         <li>
                           <strong>Preparation:</strong> Your deposit allows us to prepare for your specific service,
@@ -420,12 +554,15 @@ export default function BookingSuccessPage() {
                         </li>
                       </ul>
                       <p className="text-gray-600">
-                        The remaining 50% of the payment will be due on the day of your appointment. Your deposit will be
-                        applied towards the total cost.
+                        The remaining 50% of the payment will be due on the day of your appointment. Your deposit will
+                        be applied towards the total cost.
                       </p>
                       <p className="text-gray-600">
-                        For more information about payment details and how to make your deposit, please see the <Link href="#" className="text-pink-500 hover:text-pink-600">Deposit Payment</Link> section at
-                        the top of this page.
+                        For more information about payment details and how to make your deposit, please see the{" "}
+                        <Link href="#" className="text-pink-500 hover:text-pink-600">
+                          Deposit Payment
+                        </Link>{" "}
+                        section at the top of this page.
                       </p>
                     </div>
                   </AccordionContent>
@@ -450,15 +587,16 @@ export default function BookingSuccessPage() {
                       <div>
                         <h4 className="font-semibold text-gray-900">Can I bring someone with me?</h4>
                         <p className="text-gray-600 mt-1">
-                          Yes, but please let us know in advance if you plan to bring someone. This helps us ensure we have
-                          enough space and can maintain a comfortable environment for all our clients.
+                          Yes, but please let us know in advance if you plan to bring someone. This helps us ensure we
+                          have enough space and can maintain a comfortable environment for all our clients.
                         </p>
                       </div>
                       <div>
                         <h4 className="font-semibold text-gray-900">What about the deposit?</h4>
                         <p className="text-gray-600 mt-1">
-                          A 50% deposit is required to confirm your appointment. Please make the payment within 24 hours of
-                          booking. The deposit is non-refundable if you cancel less than 24 hours before your appointment.
+                          A 50% deposit is required to confirm your appointment. Please make the payment within 24 hours
+                          of booking. The deposit is non-refundable if you cancel less than 24 hours before your
+                          appointment.
                         </p>
                       </div>
                     </div>
@@ -492,13 +630,14 @@ export default function BookingSuccessPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Cancel Appointment</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to cancel your appointment? Please note that if you cancel less than 24 hours before your appointment, you may forfeit your deposit.
+              Are you sure you want to cancel your appointment? Please note that if you cancel less than 24 hours before
+              your appointment, you may forfeit your deposit.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleCancelAppointment} disabled={isLoading}>
-              {isLoading ? 'Cancelling...' : 'Confirm Cancellation'}
+              {isLoading ? "Cancelling..." : "Confirm Cancellation"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

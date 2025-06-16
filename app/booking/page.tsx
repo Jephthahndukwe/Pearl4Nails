@@ -28,9 +28,7 @@ export default function BookingPage() {
   const [selectedNailShape, setSelectedNailShape] = useState<string | null>(null)
   const [selectedNailDesign, setSelectedNailDesign] = useState<string | null>(null)
   const [referenceImage, setReferenceImage] = useState<string | null>(null)
-  const [selectedLocation, setSelectedLocation] = useState<string>(
-    "15 Osolo Way Off 7&8 bus stop, Ajao estate, Lagos, Nigeria",
-  )
+  const [selectedLocation, setSelectedLocation] = useState<string>("")
   const [isBookingComplete, setIsBookingComplete] = useState(false)
   const [tattooLocation, setTattooLocation] = useState<string | null>(null)
   const [tattooSize, setTattooSize] = useState<string | null>(null)

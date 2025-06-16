@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@getbrevo/brevo": "^2.2.0",
+    "@google-cloud/local-auth": "^3.0.1",
     "@hookform/resolvers": "^3.9.1",
     "@radix-ui/react-accordion": "^1.2.2",
     "@radix-ui/react-alert-dialog": "^1.1.4",
@@ -51,6 +52,8 @@
     "embla-carousel-react": "8.5.1",
     "firebase-admin": "^11.11.1",
     "framer-motion": "^12.9.4",
+    "googleapis": "^150.0.1",
+    "ics": "^3.8.1",
     "input-otp": "1.4.1",
     "lucide-react": "^0.454.0",
     "mailersend": "^2.5.0",

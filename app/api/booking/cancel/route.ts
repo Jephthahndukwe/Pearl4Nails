@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { getAppointment } from '@/app/api/services/appointment';
 import { cancelAppointment } from '@/app/api/services/appointment';
 import { sendCancellationEmail } from '@/app/api/services/email';
+import { sendOwnerCancellationNotification } from '@/app/api/services/owner-email';
 
 export async function POST(request: Request) {
   try {
@@ -31,10 +31,16 @@ export async function POST(request: Request) {
         },
         { status: 400 }
       );
-    }
+    };
 
     // Cancel the appointment
     const result = await cancelAppointment(appointmentId);
+
+    // Send cancellation email
+    await sendCancellationEmail(appointmentId);
+
+    // Send owner cancellation notification email
+    await sendOwnerCancellationNotification(appointmentId);
 
     // Redirect to cancelled page
     return NextResponse.json({

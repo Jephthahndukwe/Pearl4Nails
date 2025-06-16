@@ -1,9 +1,6 @@
 import Link from "next/link"
 import Image from "next/image"
 import SocialLinks from "@/components/social-links"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { ArrowRight } from "lucide-react"
 
 export default function Footer() {
   const currentYear = new Date().getFullYear()
@@ -97,28 +94,33 @@ export default function Footer() {
               </li>
               <li>
                 <Link href="/services" className="text-gray-300 hover:text-pink-400 transition-colors">
+                  Piercing
+                </Link>
+              </li>
+              <li>
+                <Link href="/services" className="text-gray-300 hover:text-pink-400 transition-colors">
                   Tooth Gems
                 </Link>
               </li>
               <li>
                 <Link href="/services" className="text-gray-300 hover:text-pink-400 transition-colors">
-                  Tattoo
+                  Brow Trimming
                 </Link>
               </li>
+              {/* <li>
+                <Link href="/services" className="text-gray-300 hover:text-pink-400 transition-colors">
+                  Hair Revamping
+                </Link>
+              </li> */}
+              {/* <li>
+                <Link href="/services" className="text-gray-300 hover:text-pink-400 transition-colors">
+                  Tattoo
+                </Link>
+              </li> */}
             </ul>
           </div>
 
           <div>
-            {/* <h3 className="font-bold text-pink-400 mb-6 text-lg">Subscribe</h3>
-            <p className="text-gray-400 mb-4">
-              Subscribe to our newsletter to get updates on our latest offers and services.
-            </p>
-            <form className="flex gap-2 mb-6">
-              <Input type="email" placeholder="Your email address" className="bg-gray-800 border-gray-700 text-white" />
-              <Button type="submit" className="bg-pink-500 hover:bg-pink-600">
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            </form> */}
             <h3 className="font-bold text-pink-400 mb-6 text-lg">Socials</h3>
             <div className="text-gray-400">
               <p>WhatsApp: 09160763206</p>

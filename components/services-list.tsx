@@ -65,20 +65,20 @@ export default function ServicesList({ featured = false }: ServicesListProps) {
       // price: "$20+",
       image: "/images/BrowTrimming.jpg?height=300&width=400&text=BrowTrimming",
     },
-    {
-      id: "hair",
-      name: "Hair Revamping",
-      description: "Transform your hair with our professional styling and treatment services.",
-      // price: "$70+",
-      image: "/images/WigRevamp.jpg?height=300&width=400&text=HairRevamping",
-    },
-    {
-      id: "tattoo",
-      name: "Tattoo",
-      description: "Professional tattoo services with experienced artists and a variety of styles.",
-      // price: "$150+",
-      image: "/images/Tattoo.jpg?height=300&width=400&text=Tattoo",
-    }
+    // {
+    //   id: "hair",
+    //   name: "Hair Revamping",
+    //   description: "Transform your hair with our professional styling and treatment services.",
+    //   // price: "$70+",
+    //   image: "/images/WigRevamp.jpg?height=300&width=400&text=HairRevamping",
+    // },
+    // {
+    //   id: "tattoo",
+    //   name: "Tattoo",
+    //   description: "Professional tattoo services with experienced artists and a variety of styles.",
+    //   // price: "$150+",
+    //   image: "/images/Tattoo.jpg?height=300&width=400&text=Tattoo",
+    // }
   ]
 
   const displayServices = featured ? services.slice(0, 6) : services

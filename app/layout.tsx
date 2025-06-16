@@ -13,7 +13,6 @@ export const metadata: Metadata = {
   title: "Pearl4nails - Premium Nail & Beauty Services",
   description:
     "Get 100% satisfaction with our premium nail care, lash extensions, microblading, makeup, and more beauty services.",
-    generator: 'v0.dev'
 }
 
 export default function RootLayout({

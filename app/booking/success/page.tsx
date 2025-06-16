@@ -19,6 +19,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { useRouter } from "next/navigation"
+import { findServiceById, findServiceTypeById } from "@/types/service"
 
 interface ServiceDetails {
   serviceName: string
@@ -59,7 +60,21 @@ export default function BookingSuccessPage() {
   const [isCancelling, setIsCancelling] = useState(false)
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const router = useRouter()
+  const [selectedServiceTypes, setSelectedServiceTypes] = useState<Record<string, string>>({});
+  const router = useRouter();
+
+  // Parse service types from URL parameters outside of useEffect
+  const parseServiceTypes = (searchParams: URLSearchParams) => {
+    const serviceTypesParam = searchParams.get("serviceTypes");
+    if (serviceTypesParam) {
+      try {
+        return JSON.parse(serviceTypesParam);
+      } catch (error) {
+        console.error("Error parsing service types:", error);
+      }
+    }
+    return {};
+  };
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -76,83 +91,104 @@ export default function BookingSuccessPage() {
       const preparation =
         service === "nails"
           ? [
-              "Please arrive 15 minutes early for your appointment",
-              "Make sure your nails are clean and dry",
-              "Avoid wearing nail polish if you have natural nails",
-              "Bring any reference images you would like to show",
-            ]
+            "Please arrive 15 minutes early for your appointment",
+            "Make sure your nails are clean and dry",
+            "Avoid wearing nail polish if you have natural nails",
+            "Bring any reference images you would like to show",
+          ]
           : service === "tattoo"
             ? [
-                "Please arrive 15 minutes early for your appointment",
-                "Make sure the area is clean and shaved if necessary",
-                "Avoid wearing tight clothing over the tattoo area",
-                "Bring any reference images you would like to show",
-              ]
+              "Please arrive 15 minutes early for your appointment",
+              "Make sure the area is clean and shaved if necessary",
+              "Avoid wearing tight clothing over the tattoo area",
+              "Bring any reference images you would like to show",
+            ]
             : [
-                "Please arrive 15 minutes early for your appointment",
-                "Make sure you're comfortable with the service",
-                "Feel free to bring any reference images you would like to show",
-              ]
+              "Please arrive 15 minutes early for your appointment",
+              "Make sure you're comfortable with the service",
+              "Feel free to bring any reference images you would like to show",
+            ]
 
       // Check if we have multiple services
       let services: ServiceDetails[] = []
       let hasMultipleServices = false
 
       try {
+        // Parse service types from URL parameters
+        const parsedServiceTypes = parseServiceTypes(searchParams);
+        setSelectedServiceTypes(parsedServiceTypes);
+
         // Try to parse services from URL params
-        const servicesParam = searchParams.get("services")
+        const servicesParam = searchParams.get("services");
         if (servicesParam) {
-          services = JSON.parse(decodeURIComponent(servicesParam))
-          hasMultipleServices = services.length > 0
+          try {
+            const serviceIds = JSON.parse(servicesParam);
+            services = serviceIds.map((serviceId: string) => {
+              const service = findServiceById(serviceId);
+              const serviceTypeId = selectedServiceTypes[serviceId];
+              const serviceType = serviceTypeId ? findServiceTypeById(serviceId, serviceTypeId) : null;
+
+              return {
+                serviceName: service?.name || "Service",
+                serviceTypeName: serviceType?.name || "Type",
+                servicePrice: serviceType?.price || "",
+                serviceDuration: serviceType?.duration || ""
+              };
+            });
+            hasMultipleServices = services.length > 0;
+          } catch (error) {
+            console.error("Error parsing services:", error);
+          }
+        }
+
+        const details: BookingDetails = {
+          service: searchParams.get("service") || "Service",
+          serviceType: searchParams.get("serviceType") || undefined,
+          serviceName: searchParams.get("serviceName") || undefined,
+          serviceTypeName: searchParams.get("serviceTypeName") || undefined,
+          servicePrice: searchParams.get("servicePrice") || undefined,
+          serviceDuration: searchParams.get("serviceDuration") || undefined,
+          services: hasMultipleServices ? services : undefined,
+          totalDuration: searchParams.get("totalDuration") || undefined,
+          date: searchParams.get("date") || "Date",
+          time: searchParams.get("time") || "Time",
+          nailShape: searchParams.get("nailShape"),
+          nailDesign: searchParams.get("nailDesign"),
+          tattooLocation: searchParams.get("tattooLocation"),
+          tattooSize: searchParams.get("tattooSize"),
+          referenceImage: searchParams.get("referenceImage"),
+          location: searchParams.get("location") || "",
+          contact: {
+            email: "pearl4nails@gmail.com",
+            phone: "09160763206",
+          },
+          preparation,
+          appointmentId: searchParams.get("appointmentId") || "AP123456",
+        }
+
+        // Set booking details to state
+        setBookingDetails(details)
+
+        // Log for debugging - no sensitive info
+        console.log("Appointment details loaded", {
+          service: details.service,
+          date: details.date,
+          time: details.time,
+          appointmentId: details.appointmentId,
+          hasMultipleServices,
+          services: details.services,
+        })
+
+        // Redirect if user tries to access success page without booking
+        if (!details.date || !details.time || !details.appointmentId) {
+          router.push("/booking");
         }
       } catch (error) {
-        console.error("Error parsing services:", error)
-      }
-
-      const details: BookingDetails = {
-        service: searchParams.get("service") || "Service",
-        serviceType: searchParams.get("serviceType") || undefined,
-        serviceName: searchParams.get("serviceName") || undefined,
-        serviceTypeName: searchParams.get("serviceTypeName") || undefined,
-        servicePrice: searchParams.get("servicePrice") || undefined,
-        serviceDuration: searchParams.get("serviceDuration") || undefined,
-        services: hasMultipleServices ? services : undefined,
-        totalDuration: searchParams.get("totalDuration") || undefined,
-        date: searchParams.get("date") || "Date",
-        time: searchParams.get("time") || "Time",
-        nailShape: searchParams.get("nailShape"),
-        nailDesign: searchParams.get("nailDesign"),
-        tattooLocation: searchParams.get("tattooLocation"),
-        tattooSize: searchParams.get("tattooSize"),
-        referenceImage: searchParams.get("referenceImage"),
-        location: searchParams.get("location") || "",
-        contact: {
-          email: "pearl4nails@gmail.com",
-          phone: "09160763206",
-        },
-        preparation,
-        appointmentId: searchParams.get("appointmentId") || "AP123456",
-      }
-
-      // Set booking details to state
-      setBookingDetails(details)
-
-      // Log for debugging - no sensitive info
-      console.log("Appointment details loaded", {
-        service: details.service,
-        date: details.date,
-        time: details.time,
-        appointmentId: details.appointmentId,
-        hasMultipleServices,
-        services: details.services,
-      })
-
-      // Redirect if user tries to access success page without booking
-      if (!details.date || !details.time || !details.appointmentId) {
-        router.push("/booking")
+        console.error("Error processing booking details:", error);
+        router.push("/booking");
       }
     }
-  }, [router])
+  }, [router]); // Removed selectedServiceTypes from dependencies
 
   if (!bookingDetails) {
     return (
@@ -168,50 +204,99 @@ export default function BookingSuccessPage() {
   const handleAddToCalendar = async () => {
     setIsAddingToCalendar(true)
     try {
-      // Create title based on whether we have multiple services or a single service
+      // Create title and description based on whether we have multiple services or a single service
       let title = "Pearl4Nails - "
       let description = ""
 
       if (bookingDetails.services && bookingDetails.services.length > 0) {
         // Multiple services
-        title += bookingDetails.services.map((s) => s.serviceTypeName).join(", ")
-        description = `Services:\n${bookingDetails.services
-          .map(
-            (s) =>
-              `- ${s.serviceName} - ${s.serviceTypeName}${s.servicePrice ? ` (${s.servicePrice})` : ""}${s.serviceDuration ? ` (${s.serviceDuration})` : ""}`,
-          )
-          .join("\n")}`
+        const serviceNames = bookingDetails.services
+          .map(s => s.serviceName || s.serviceTypeName)
+          .filter(Boolean)
+          .filter((name, index, self) => self.indexOf(name) === index); // Remove duplicates
+          
+        title += serviceNames.length > 0 ? serviceNames.join(", ") : "Appointment";
+        
+        // Group services by type
+        const servicesByType = bookingDetails.services.reduce((acc, service) => {
+          const type = service.serviceTypeName || 'Services';
+          if (!acc[type]) {
+            acc[type] = [];
+          }
+          acc[type].push(service);
+          return acc;
+        }, {} as Record<string, typeof bookingDetails.services>);
+
+        // Build description with grouped services
+        description = Object.entries(servicesByType)
+          .map(([type, services]) => {
+            const serviceList = services
+              .map(s => {
+                let serviceText = `• ${s.serviceName || type}`;
+                if (s.servicePrice) serviceText += ` - ${s.servicePrice}`;
+                if (s.serviceDuration) serviceText += ` (${s.serviceDuration})`;
+                return serviceText;
+              })
+              .join('\n');
+            
+            return `${type}:\n${serviceList}`;
+          })
+          .join('\n\n');
 
         if (bookingDetails.totalDuration) {
-          description += `\nTotal Duration: ${bookingDetails.totalDuration}`
+          description += `\n\nTotal Duration: ${bookingDetails.totalDuration}`;
         }
       } else {
-        // Single service
-        title += bookingDetails.serviceTypeName || bookingDetails.serviceName || bookingDetails.service
-        description = `Service: ${bookingDetails.serviceTypeName || bookingDetails.serviceName || bookingDetails.service}${bookingDetails.servicePrice ? `\nPrice: ${bookingDetails.servicePrice}` : ""}${bookingDetails.serviceDuration ? `\nDuration: ${bookingDetails.serviceDuration}` : ""}`
+        // Single service (legacy format)
+        const serviceName = bookingDetails.serviceTypeName || bookingDetails.serviceName || bookingDetails.service || "Appointment";
+        title += serviceName.replace(/\s*\([^)]*\)/g, '').trim(); // Remove anything in parentheses
+        
+        description = `Service: ${serviceName}`;
+
+        if (bookingDetails.servicePrice) {
+          description += `\nPrice: ${bookingDetails.servicePrice}`;
+        }
+        if (bookingDetails.serviceDuration) {
+          description += `\nDuration: ${bookingDetails.serviceDuration}`;
+        }
       }
 
-      description += `\nLocation: ${bookingDetails.location}\nContact: ${bookingDetails.contact.email}`
+      // Add additional details
+      description += `\n\n📅 Date: ${bookingDetails.date}\n🕒 Time: ${bookingDetails.time}\n📍 Location: ${bookingDetails.location}\n\n📞 Contact:\n✉️ Email: pearl4nails@gmail.com\n📱 Phone: 09160763206`;
 
-      // Calculate end time based on total duration or service duration
-      let durationMinutes = 90 // Default 90 minutes
-      if (bookingDetails.totalDuration) {
-        const match = bookingDetails.totalDuration.match(/(\d+)/)
-        if (match) {
-          durationMinutes = Number.parseInt(match[1])
-        }
-      } else if (bookingDetails.serviceDuration) {
-        const match = bookingDetails.serviceDuration.match(/(\d+)/)
-        if (match) {
-          durationMinutes = Number.parseInt(match[1])
-        }
+      // Calculate duration in minutes (default to 1 hour if not specified)
+      let durationMinutes = 60;
+      const durationText = bookingDetails.totalDuration || bookingDetails.serviceDuration || '';
+      
+      // Try to parse hours and minutes from duration text
+      const hoursMatch = durationText.match(/(\d+)\s*(?:hours?|hrs?|h)/i);
+      const minutesMatch = durationText.match(/(\d+)\s*(?:minutes?|mins?|m)(?!\s*\d)/i);
+      
+      if (hoursMatch) durationMinutes = parseInt(hoursMatch[1]) * 60;
+      if (minutesMatch) durationMinutes += parseInt(minutesMatch?.[1] || '0');
+      if (durationMinutes === 0) durationMinutes = 60; // Default to 1 hour if duration is 0
+
+      // Parse date in M/D/YYYY format
+      const [month, day, year] = bookingDetails.date.split('/').map(Number);
+      // Create date in local timezone
+      const startDate = new Date(year, month - 1, day);
+      
+      // Parse time in H:MM AM/PM format
+      const timeMatch = bookingDetails.time.match(/(\d+):(\d+)\s*(AM|PM)/i);
+      if (timeMatch) {
+        let [_, hours, minutes, period] = timeMatch;
+        let hour = parseInt(hours, 10);
+        if (period.toUpperCase() === 'PM' && hour < 12) hour += 12;
+        if (period.toUpperCase() === 'AM' && hour === 12) hour = 0;
+        startDate.setHours(hour, parseInt(minutes, 10), 0, 0);
       }
 
       const event: CalendarEvent = {
-        title,
-        description,
-        start: new Date(`${bookingDetails.date} ${bookingDetails.time}`),
-        end: new Date(new Date(`${bookingDetails.date} ${bookingDetails.time}`).getTime() + durationMinutes * 60000),
+        title: title.replace(/ - Type/g, ''), // Remove any "- Type" suffixes
+        description: description.replace(/ - Type/g, ''), // Remove any "- Type" suffixes
+        start: startDate,
+        end: new Date(startDate.getTime() + durationMinutes * 60000),
+        location: bookingDetails.location || ''
       }
 
       const result = await addEventToCalendar(event)

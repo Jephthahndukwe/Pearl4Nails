@@ -274,6 +274,24 @@ export default function BookingPage() {
       const url = new URL("/booking/success", window.location.origin)
       url.searchParams.set("appointmentId", data.appointmentId)
       url.searchParams.set("services", JSON.stringify(selectedServices))
+      url.searchParams.set("serviceTypes", JSON.stringify(selectedServiceTypes))
+      
+      // Include service details for the first service (legacy support)
+      if (selectedServices.length > 0) {
+        const firstService = selectedServices[0];
+        const firstServiceType = selectedServiceTypes[firstService];
+        const serviceType = findServiceTypeById(firstService, firstServiceType);
+        
+        if (serviceType) {
+          url.searchParams.set("service", firstService);
+          url.searchParams.set("serviceType", firstServiceType);
+          url.searchParams.set("serviceName", findServiceById(firstService)?.name || "");
+          url.searchParams.set("serviceTypeName", serviceType.name || "");
+          url.searchParams.set("servicePrice", serviceType.price || "");
+          url.searchParams.set("serviceDuration", serviceType.duration || "");
+        }
+      }
+      
       url.searchParams.set("date", date?.toLocaleDateString())
       url.searchParams.set("time", selectedTime)
       url.searchParams.set("totalDuration", formatDuration(totalDuration))

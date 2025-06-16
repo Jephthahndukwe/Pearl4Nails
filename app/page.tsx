@@ -455,7 +455,7 @@ export default function Home() {
                 with our premium beauty services.
               </p>
               <div className="flex flex-col sm:flex-row justify-center gap-4">
-                <Button asChild size="lg" className="bg-white text-pink-500 hover:bg-pink-50 text-lg px-8 rounded-full">
+                <Button asChild size="lg" className="bg-white text-pink-500 hover:bg-pink-50 text-lg px-4 py-2 rounded-full">
                   <Link href="/booking">Book Now</Link>
                 </Button>
                 <Button

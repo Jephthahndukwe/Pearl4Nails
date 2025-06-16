@@ -112,6 +112,8 @@ export const sendWhatsAppNotification = async (bookingDetails: any) => {
         timeout: 10000, // 10 second timeout
         timeoutErrorMessage: 'CallMeBot API request timed out',
       })
+
+      console.log("CallMeBot API response:", response.data)
       
       if (response.data === "OK") {
         return true

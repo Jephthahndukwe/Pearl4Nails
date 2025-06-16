@@ -1,5 +1,11 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
+import { sendAppointmentConfirmation } from '../../services/email';
+import { sendPushNotification } from '../../services/fcm';
+import { sendWhatsAppNotification } from '../../services/whatsapp';
+import { sendOwnerAppointmentNotification } from '../../services/owner-email';
+import { getAppointmentCollection } from '@/app/lib/mongodb';
+import { clearTimeSlotCache } from '../../services/appointment';
 
 export async function POST(req: NextRequest) {
   try {
@@ -13,11 +19,24 @@ export async function POST(req: NextRequest) {
     const appointmentDate = new Date(appointmentData.date);
 
     // Format the date into various formats for searching and display
+    const year = appointmentDate.getFullYear();
+    const month = String(appointmentDate.getMonth() + 1).padStart(2, '0');
+    const day = String(appointmentDate.getDate()).padStart(2, '0');
+    
     const dateFormats = {
-      YYYYMMDD: appointmentDate.toISOString().slice(0, 10).replace(/-/g, ""), //YYYYMMDD
-      MMDDYYYY: `${String(appointmentDate.getMonth() + 1).padStart(2, '0')}${String(appointmentDate.getDate()).padStart(2, '0')}${appointmentDate.getFullYear()}`, // MMDDYYYY
-      DDMMYYYY: `${String(appointmentDate.getDate()).padStart(2, '0')}${String(appointmentDate.getMonth() + 1).padStart(2, '0')}${appointmentDate.getFullYear()}`, // DDMMYYYY
+      YYYYMMDD: `${year}${month}${day}`, // YYYYMMDD
+      MMDDYYYY: `${month}${day}${year}`, // MMDDYYYY
+      DDMMYYYY: `${day}${month}${year}`, // DDMMYYYY
     };
+    
+    console.log('Formatted dates:', {
+      year,
+      month,
+      day,
+      dateFormats,
+      isoString: appointmentDate.toISOString(),
+      localString: appointmentDate.toString()
+    });
 
     const formattedDate = `${String(appointmentDate.getMonth() + 1).padStart(2, '0')}/${String(appointmentDate.getDate()).padStart(2, '0')}/${appointmentDate.getFullYear()}`;
 
@@ -41,21 +60,86 @@ export async function POST(req: NextRequest) {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       environment: process.env.NODE_ENV || "unknown",
-      // Format customer data for existing notification services
-      customer: {
-        name: appointmentData.name,
-        email: appointmentData.email,
-        phone: appointmentData.phone,
-        notes: appointmentData.notes,
-      },
+      // Add raw date for debugging
+      rawDate: appointmentData.date,
+      rawTime: appointmentData.time,
+      rawServices: appointmentData.services,
+      rawTotalDuration: appointmentData.totalDuration
+    };
+
+    console.log('Saving appointment to database:', JSON.stringify({
+      date: formattedDate,
+      time: appointmentData.time,
+      dateFormats,
+      services: appointmentData.services,
+      totalDuration: appointmentData.totalDuration,
+      rawDate: appointmentData.date,
+      rawTime: appointmentData.time
+    }, null, 2));
+
+    // Save to MongoDB
+    try {
+      const collection = await getAppointmentCollection();
+      if (!collection) {
+        console.error('Failed to connect to MongoDB collection');
+        return new NextResponse('Database connection error', { status: 500 });
+      }
+
+      const result = await collection.insertOne(appointment);
+      console.log('Appointment saved to MongoDB:', result.insertedId);
+      
+      // Clear the time slot cache for this date to ensure availability is updated
+      clearTimeSlotCache(formattedDate);
+    } catch (dbError) {
+      console.error('Failed to save appointment to database:', dbError);
+      return new NextResponse('Failed to save appointment', { status: 500 });
     }
 
-    // TODO: Implement database storage here (e.g., MongoDB, Supabase, etc.)
-    // Example: await db.collection('appointments').insertOne(appointment);
-    console.log("Appointment Data (Simulated DB Storage):", appointment);
+    // Send all notifications in parallel
+    try {
+      await Promise.all([
+        // Send confirmation email to client
+        sendAppointmentConfirmation(appointment).catch(error => 
+          console.error("Failed to send confirmation email:", error)
+        ),
+        
+        // Send notification to owner
+        sendOwnerAppointmentNotification(appointment).catch(error =>
+          console.error("Failed to send owner notification:", error)
+        ),
+        
+        // Send push notification via Pushover
+        sendPushNotification({
+          title: 'New Appointment',
+          body: `${appointment.name} booked an appointment for ${appointment.date} at ${appointment.time}`,
+          data: { type: 'new_appointment', appointmentId: appointment.appointmentId }
+        }).then(result => 
+          console.log('Push notification sent:', result ? 'Success' : 'Failed')
+        ).catch(error => 
+          console.error("Failed to send push notification:", error)
+        ),
+        
+        // Send WhatsApp notification via CallMeBot
+        sendWhatsAppNotification(appointment).then(result =>
+          console.log('WhatsApp notification sent:', result ? 'Success' : 'Failed')
+        ).catch(error =>
+          console.error("Failed to send WhatsApp notification:", error)
+        )
+      ]);
+    } catch (error) {
+      console.error("Error sending notifications:", error);
+      // Don't fail the request if notifications fail
+    }
+
+
+    return NextResponse.json({ 
+      success: true,
+      appointmentId,
+      appointment 
+    }, { status: 201 });
 
     // Return the appointment details, including the new appointmentId
-    return NextResponse.json({ appointment }, { status: 201 });
+    // return NextResponse.json({ appointment }, { status: 201 });
 
   } catch (error) {
     console.error("Error processing appointment confirmation:", error);

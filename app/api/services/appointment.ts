@@ -50,55 +50,132 @@ export async function getAvailableTimeSlots(searchDate: string): Promise<{ time:
 
     console.log("Successfully connected to MongoDB")
 
-    // Create different possible date formats to query with
-    const possibleDateFormats = [
-      formattedDate, // MM/DD/YYYY
-      `${month}-${day}-${year}`, // MM-DD-YYYY
-      `${year}-${month}-${day}`, // YYYY-MM-DD
-      dateParamObj.toISOString().split("T")[0], // YYYY-MM-DD ISO format
-      new Date(dateParamObj).toLocaleDateString("en-US"), // Locale-specific format
-    ]
+    // Parse the input date string (MM/DD/YYYY) into components
+    const [monthStr, dayStr, yearStr] = formattedDate.split('/');
+    const monthNum = parseInt(monthStr, 10);
+    const dayNum = parseInt(dayStr, 10);
+    const yearNum = parseInt(yearStr, 10);
+    
+    // Create date objects in local timezone
+    const localDate = new Date(yearNum, monthNum - 1, dayNum);
+    
+    // Create dates that are clearly in the correct timezone
+    const startOfDay = new Date(Date.UTC(yearNum, monthNum - 1, dayNum, 0, 0, 0));
+    const endOfDay = new Date(Date.UTC(yearNum, monthNum - 1, dayNum, 23, 59, 59, 999));
+    
+    // Format dates for query
+    const yyyy = String(yearNum);
+    const mm = monthStr.padStart(2, '0');
+    const dd = dayStr.padStart(2, '0');
+    
+    // Generate all possible date formats
+    const dateFormats = {
+      formattedDate: `${mm}/${dd}/${yyyy}`,  // MM/DD/YYYY
+      isoDate: startOfDay.toISOString().split('T')[0], // YYYY-MM-DD
+      yyyymmdd: `${yyyy}${mm}${dd}`,
+      mmddyyyy: `${mm}${dd}${yyyy}`,
+      ddmmyyyy: `${dd}${mm}${yyyy}`
+    };
 
-    console.log(`Searching with date formats:`, possibleDateFormats)
+    console.log('Searching appointments for date:', {
+      inputDate: formattedDate,
+      dateFormats,
+      startOfDay: startOfDay.toISOString(),
+      endOfDay: endOfDay.toISOString(),
+      localDate: localDate.toString()
+    });
 
-    // Build a comprehensive query that checks all possible date locations
-    let bookedAppointments = []
+    // Build query to find all appointments on this date
+    let bookedAppointments: any[] = [];
     try {
       const query = {
         $or: [
-          // Check the primary date field
-          { date: { $in: possibleDateFormats } },
-          // Check inside dateFormats structure (for newer appointments)
-          { "dateFormats.standard": formattedDate },
-          { "dateFormats.iso": dateParamObj.toISOString().split("T")[0] },
-          { "dateFormats.dash": `${month}-${day}-${year}` },
-          { "dateFormats.ymd": `${year}-${month}-${day}` },
-          // If the date is stored as a Date object in MongoDB
+          // Check exact date string match (MM/DD/YYYY)
+          { date: dateFormats.formattedDate },
+          // Check date range for Date objects (with timezone handling)
           {
             date: {
-              $gte: new Date(new Date(formattedDate).setHours(0, 0, 0, 0)),
-              $lt: new Date(new Date(formattedDate).setHours(23, 59, 59, 999))
+              $gte: startOfDay,
+              $lt: endOfDay
             }
-          }
+          },
+          // Check all date format variations
+          { 'dateFormats.YYYYMMDD': dateFormats.yyyymmdd },
+          { 'dateFormats.MMDDYYYY': dateFormats.mmddyyyy },
+          { 'dateFormats.DDMMYYYY': dateFormats.ddmmyyyy },
+          { 'dateFormats.iso': dateFormats.isoDate },
+          // Also check if date is stored as ISO string
+          { date: dateFormats.isoDate }
         ],
         status: { $in: ["confirmed", "pending"] }
       };
       
       console.log('Executing MongoDB query:', JSON.stringify(query, null, 2));
       
+      // Log the exact query being sent to MongoDB
+      console.log('Executing MongoDB find with query:', JSON.stringify(query, null, 2));
+      
+      // Execute the query
       const cursor = collection.find(query);
       if (!cursor) {
-          console.error('Failed to create cursor for query');
-          return getDefaultTimeSlots();
-        }
-        
-        bookedAppointments = await cursor.toArray();
-      } catch (queryError) {
-      console.error("Error querying appointments:", queryError)
-      return getDefaultTimeSlots() // Return default slots on query error
+        console.error('Failed to create cursor for query');
+        return getDefaultTimeSlots();
+      }
+      
+      // Get the count of matching documents
+      const count = await collection.countDocuments(query);
+      console.log(`MongoDB found ${count} matching documents`);
+      
+      // Get the actual documents
+      bookedAppointments = await cursor.toArray();
+      
+      // Log the raw query and results for debugging
+      console.log('MongoDB query details:', JSON.stringify({
+        collection: collection.collectionName,
+        query: {
+          ...query,
+          // Simplify the query for logging
+          $or: query.$or.map(cond => {
+            if (cond.date && typeof cond.date === 'object') {
+              return { date: { $gte: 'Date', $lt: 'Date' } };
+            }
+            return cond;
+          })
+        },
+        options: {}
+      }, null, 2));
+      
+      console.log(`Found ${bookedAppointments.length} appointments for ${formattedDate}`);
+      
+      // Log a summary of the found appointments
+      if (bookedAppointments.length > 0) {
+        console.log('Appointments found:');
+        bookedAppointments.forEach((appt: any, index: number) => {
+          console.log(`[${index + 1}] Date: ${appt.date}, Time: ${appt.time}, ID: ${appt._id}`);
+        });
+      }
+    } catch (queryError) {
+      console.error("Error querying appointments:", queryError);
+      if (queryError instanceof Error) {
+        console.error('Error details:', {
+          name: queryError.name,
+          message: queryError.message,
+          stack: queryError.stack
+        });
+      }
+      return getDefaultTimeSlots(); // Return default slots on query error
     }
 
-    console.log(`[${process.env.NODE_ENV}] Booked appointments found:`, bookedAppointments.length)
+    console.log(`[${process.env.NODE_ENV}] Booked appointments found:`, bookedAppointments.length);
+    console.log('Found appointments:', JSON.stringify(bookedAppointments, null, 2));
+    
+    // Log the first few documents in the collection for debugging
+    try {
+      const firstFew = await collection.find({}).limit(5).toArray();
+      console.log('First 5 documents in collection:', JSON.stringify(firstFew, null, 2));
+    } catch (error) {
+      console.error('Error fetching sample documents:', error);
+    }
 
     // Get all possible time slots (9am to 8pm)
     const allTimeSlots = [
@@ -195,17 +272,23 @@ export async function getAvailableTimeSlots(searchDate: string): Promise<{ time:
       }
     })
 
-    // Create array of available time slots
+    // Create array of available time slots with better time slot checking
     const availableTimeSlots = allTimeSlots.map((time) => {
       try {
         const timeInMinutes = parseTimeToMinutes(time)
-
-        // Check if this time slot is within any blocked range
-        const isBlocked = blockedTimeRanges.some((range) => timeInMinutes >= range.start && timeInMinutes < range.end)
-
+        const slotEndTime = timeInMinutes + 60 // Assume each slot is 1 hour by default
+        
+        // Check if this time slot overlaps with any blocked time ranges
+        const isBlocked = blockedTimeRanges.some(({ start, end }) => {
+          // Check for overlap: current slot starts before blocked range ends AND current slot ends after blocked range starts
+          return timeInMinutes < end && slotEndTime > start
+        })
+        
+        console.log(`Time slot ${time} (${timeInMinutes}-${slotEndTime}min) is ${isBlocked ? 'blocked' : 'available'}`)
+        
         return {
           time,
-          isAvailable: !isBlocked,
+          isAvailable: !isBlocked
         }
       } catch (error) {
         console.error(`Error processing time slot: ${time}`, error)
@@ -241,7 +324,7 @@ export async function getAvailableTimeSlots(searchDate: string): Promise<{ time:
 }
 
 // Cache for time slots to avoid repeated database queries
-const timeSlotCache: Record<string, { data: any; timestamp: number }> = {}
+export const timeSlotCache: Record<string, { data: any; timestamp: number }> = {}
 const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
 
 // Helper function to get default time slots
@@ -268,11 +351,17 @@ function isValidObjectId(id: string): boolean {
   return /^[0-9a-fA-F]{24}$/.test(id);
 }
 
+// Function to validate UUID
+function isValidUUID(id: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+}
+
 // Function to cancel an appointment
 export async function cancelAppointment(appointmentId: string): Promise<{ success: boolean; redirectUrl: string }> {
   try {
     // Validate the appointment ID format
-    if (!appointmentId || typeof appointmentId !== 'string' || !isValidObjectId(appointmentId)) {
+    if (!appointmentId || typeof appointmentId !== 'string' || 
+        (!isValidObjectId(appointmentId) && !isValidUUID(appointmentId))) {
       throw new Error('Invalid appointment ID format');
     }
 
@@ -282,9 +371,8 @@ export async function cancelAppointment(appointmentId: string): Promise<{ succes
       throw new Error('Failed to connect to the database');
     }
 
-    // Convert string ID to ObjectId
-    const { ObjectId } = await import('mongodb');
-    const query = { _id: new ObjectId(appointmentId) };
+    // For UUIDs, we store them in the appointmentId field, not _id
+    const query = { appointmentId: appointmentId };
 
     // Update the appointment status to 'cancelled'
     const result = await collection.updateOne(
@@ -304,6 +392,9 @@ export async function cancelAppointment(appointmentId: string): Promise<{ succes
     // Clear the time slot cache since we've modified an appointment
     clearTimeSlotCache();
 
+    // If we get here, the update was successful
+    console.log('Successfully cancelled appointment:', appointmentId);
+
     return {
       success: true,
       redirectUrl: '/booking/cancelled'
@@ -315,7 +406,7 @@ export async function cancelAppointment(appointmentId: string): Promise<{ succes
 }
 
 // Helper function to clear the time slot cache
-function clearTimeSlotCache(date?: string) {
+export function clearTimeSlotCache(date?: string) {
   if (date) {
     // Clear cache for specific date
     const dateObj = new Date(date)

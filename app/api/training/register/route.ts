@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { sendTrainingWhatsAppNotification } from '../../services/whatsapp';
 import { sendTrainingConfirmationEmail } from '../../services/email';
 import { sendTrainingPushNotification } from '../../services/fcm';
+import { sendOwnerTrainingNotification } from '../../services/owner-email';
 
 /**
  * API handler for training registration
@@ -88,14 +89,28 @@ export async function POST(request: Request) {
       date: new Date().toLocaleDateString(),
     };
     
-    // Send WhatsApp notification
-    await sendTrainingWhatsAppNotification(registration);
-    
-    // Send confirmation email to user
-    await sendTrainingConfirmationEmail(registration);
-    
-    // Send push notification
-    await sendTrainingPushNotification(registration);
+    // Send all notifications in parallel
+    await Promise.all([
+      // Send WhatsApp notification
+      sendTrainingWhatsAppNotification(registration).catch(error => 
+        console.error('Failed to send WhatsApp notification:', error)
+      ),
+      
+      // Send confirmation email to user
+      sendTrainingConfirmationEmail(registration).catch(error => 
+        console.error('Failed to send confirmation email:', error)
+      ),
+      
+      // Send push notification
+      sendTrainingPushNotification(registration).catch(error => 
+        console.error('Failed to send push notification:', error)
+      ),
+      
+      // Send notification to owner
+      sendOwnerTrainingNotification(registration).catch(error =>
+        console.error('Failed to send owner notification:', error)
+      )
+    ]);
     
     // Return success response with registration details
     return NextResponse.json({ 

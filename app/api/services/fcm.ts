@@ -63,6 +63,7 @@ export const sendPushNotification = async (bookingDetails: any) => {
       timeout: 5000, // 5 second timeout
       timeoutErrorMessage: 'Pushover API request timed out',
     })
+    console.log("Pushover API response:", response.data)
     return response.data.status === 1
   } catch (error: any) {
     if (error.code === 'ECONNABORTED') {

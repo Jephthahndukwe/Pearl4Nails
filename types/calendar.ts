@@ -3,6 +3,7 @@ export interface CalendarEvent {
   description: string;
   start: Date;
   end: Date;
+  location?: string;
 }
 
 export interface CalendarResponse {

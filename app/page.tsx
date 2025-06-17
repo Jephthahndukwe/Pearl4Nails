@@ -2,7 +2,7 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { Instagram, ChevronRight, Star } from "lucide-react"
+import { Instagram, ChevronRight, Star, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import ServiceCard from "@/components/service-card"
 import SocialLinks from "@/components/social-links"
@@ -205,7 +205,7 @@ export default function Home() {
                 </Button>
               </div>
 
-              {/* <div className="mt-8">
+              <div className="mt-8">
               <Button
                 asChild
                 variant="outline"
@@ -217,7 +217,7 @@ export default function Home() {
                   Try Our Nail Art Game!
                 </Link>
               </Button>
-            </div> */}
+            </div>
 
               <div className="mt-12 flex items-center gap-6">
                 <div className="flex -space-x-4">

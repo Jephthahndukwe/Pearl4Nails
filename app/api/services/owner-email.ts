@@ -1,17 +1,47 @@
-import nodemailer from "nodemailer"
+import { Resend } from 'resend';
 
-// Create a transporter for Gmail
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASSWORD,
-  },
-})
+// Initialize Resend
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const getLogoUrl = () => {
   return process.env.NEXT_PUBLIC_APP_URL + "/images/Pearl4Nails_logo.png"
 }
+
+// Common email styles (matching the customer email styles)
+const emailStyles = `
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      line-height: 1.6;
+      color: #333;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #fff;
+    }
+    .header {
+      text-align: center;
+      padding: 20px 0;
+      background-color: #fff5f7;
+      border-bottom: 2px solid #ff69b4;
+    }
+    .appointment-details {
+      background-color: #fff5f7;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 20px 0;
+    }
+    .details-item {
+      margin-bottom: 10px;
+      padding: 8px;
+      background-color: #fff;
+      border-radius: 5px;
+      border-left: 4px solid #ff69b4;
+    }
+  </style>
+`;
 
 export const sendOwnerAppointmentNotification = async (appointment: any) => {
   try {
@@ -22,43 +52,42 @@ export const sendOwnerAppointmentNotification = async (appointment: any) => {
       servicesHtml = appointment.services
         .map(
           (service: any, index: number) => `
-        <div class="details-item" style="margin-bottom: 15px;">
-          <strong>${index + 1}. ${service.serviceName} - ${service.serviceTypeName}</strong>
-          <div style="margin-left: 20px; margin-top: 5px;">
-            ${service.servicePrice ? `<div>Price: ${service.servicePrice}</div>` : ''}
-            ${service.serviceDuration ? `<div>Duration: ${service.serviceDuration}</div>` : ''}
-          </div>
-        </div>`
-        )
+        <div class="details-item">
+          <strong>${index + 1}. Service:</strong> ${service.serviceName} - ${service.serviceTypeName}
+        </div>
+        ${service.servicePrice ? `
+        <div class="details-item">
+          <strong>Price:</strong> ${service.servicePrice}
+        </div>` : ""}
+        ${service.serviceDuration ? `
+        <div class="details-item">
+          <strong>Duration:</strong> ${service.serviceDuration}
+        </div>` : ""}
+      `)
         .join("")
 
       // Add total duration if available
       if (appointment.totalDuration) {
         servicesHtml += `
-        <div class="details-item" style="margin-top: 10px; font-weight: bold;">
-          Total Duration: ${appointment.totalDuration}
-        </div>`
+        <div class="details-item">
+          <strong>Total Duration:</strong> ${appointment.totalDuration}
+        </div>`;
       }
     } else {
       // Single service (legacy format)
       servicesHtml = `
       <div class="details-item">
         <strong>Service:</strong> ${appointment.serviceTypeName || appointment.serviceName || appointment.service || 'N/A'}
-      </div>`
-      
-      if (appointment.servicePrice) {
-        servicesHtml += `
-        <div class="details-item">
-          <strong>Price:</strong> ${appointment.servicePrice}
-        </div>`
-      }
-      
-      if (appointment.serviceDuration) {
-        servicesHtml += `
-        <div class="details-item">
-          <strong>Duration:</strong> ${appointment.serviceDuration}
-        </div>`
-      }
+      </div>
+      ${appointment.servicePrice ? `
+      <div class="details-item">
+        <strong>Price:</strong> ${appointment.servicePrice}
+      </div>` : ""}
+      ${appointment.serviceDuration ? `
+      <div class="details-item">
+        <strong>Duration:</strong> ${appointment.serviceDuration}
+      </div>` : ""}
+    `;
     }
 
     // Format the date
@@ -73,57 +102,25 @@ export const sendOwnerAppointmentNotification = async (appointment: any) => {
     // Create email HTML
     const emailHtml = `
     <!DOCTYPE html>
-    <html>
-      <head>
-        <style>
-          body {
-            font-family: Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
-          }
-          .container {
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-          }
-          .header {
-            text-align: center;
-            padding: 20px 0;
-            border-bottom: 1px solid #e0e0e0;
-            margin-bottom: 20px;
-          }
-          .logo {
-            max-width: 200px;
-            height: auto;
-            margin-bottom: 10px;
-          }
-          .details {
-            margin: 20px 0;
-          }
-          .details-item {
-            margin-bottom: 10px;
-          }
-          .footer {
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid #e0e0e0;
-            text-align: center;
-            font-size: 14px;
-            color: #666;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <img src="${getLogoUrl()}" alt="Pearl4Nails Logo" class="logo">
-            <h1>New Appointment Notification</h1>
-          </div>
-          
-          <div class="details">
-            <h2>Appointment Details</h2>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>New Appointment Notification</title>
+      ${emailStyles}
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <img src="${getLogoUrl()}" alt="Pearl4Nails Logo" style="max-width: 200px;" />
+          <h1 style="color: #ff69b4; font-size: 24px; margin: 10px 0;">New Appointment Notification</h1>
+        </div>
+
+        <div style="padding: 20px;">
+          <p>A new appointment has been booked!</p>
+
+          <div class="appointment-details">
+            <h3 style="color: #ff69b4; margin: 0 0 15px 0; font-size: 18px;">Appointment Details</h3>
             <div class="details-item">
               <strong>Appointment ID:</strong> ${appointment.appointmentId}
             </div>
@@ -133,11 +130,15 @@ export const sendOwnerAppointmentNotification = async (appointment: any) => {
             <div class="details-item">
               <strong>Time:</strong> ${appointment.time}
             </div>
-            
-            <h3 style="margin-top: 20px;">Services Booked</h3>
+          </div>
+
+          <div class="appointment-details">
+            <h3 style="color: #ff69b4; margin: 0 0 15px 0; font-size: 18px;">Services Booked</h3>
             ${servicesHtml}
-            
-            <h3 style="margin-top: 20px;">Client Information</h3>
+          </div>
+
+          <div class="appointment-details">
+            <h3 style="color: #ff69b4; margin: 0 0 15px 0; font-size: 18px;">Client Information</h3>
             <div class="details-item">
               <strong>Name:</strong> ${appointment.name}
             </div>
@@ -152,20 +153,22 @@ export const sendOwnerAppointmentNotification = async (appointment: any) => {
               <strong>Notes:</strong> ${appointment.notes}
             </div>` : ''}
           </div>
+
+          <p>This is an automated notification.</p>
           
-          <div class="footer">
-            <p>This is an automated notification. Please do not reply to this email.</p>
-            <p>&copy; ${new Date().getFullYear()} Pearl4Nails. All rights reserved.</p>
-          </div>
+          <p>Best regards,<br>Pearl4Nails System</p>
         </div>
-      </body>
+      </div>
+    </body>
     </html>
     `
 
-    // Send email
-    await transporter.sendMail({
-      from: `"Pearl4Nails" <${process.env.EMAIL_USER}>`,
-      to: process.env.EMAIL_USER || '',
+    // Send email using Resend
+    await resend.emails.send({
+      from: process.env.EMAIL_FROM || 'Pearl4Nails <noreply@pearl4nails.com>',
+      to: process.env.NODE_ENV === 'production' 
+        ? (process.env.EMAIL_FROM || 'noreply@pearl4nails.com')
+        : (process.env.TEST_EMAIL || 'onboarding@resend.dev'),
       subject: `New Appointment Booked By: ${appointment.name} - ${formattedDate} at ${appointment.time}`,
       html: emailHtml,
     })
@@ -195,98 +198,57 @@ export const sendOwnerCancellationNotification = async (appointment: any) => {
       servicesHtml = appointment.services
         .map(
           (service: any, index: number) => `
-        <div class="details-item" style="margin-bottom: 15px;">
-          <strong>${index + 1}. ${service.serviceName} - ${service.serviceTypeName}</strong>
-          <div style="margin-left: 20px; margin-top: 5px;">
-            ${service.servicePrice ? `<div>Price: ${service.servicePrice}</div>` : ''}
-            ${service.serviceDuration ? `<div>Duration: ${service.serviceDuration}</div>` : ''}
-          </div>
-        </div>`
-        )
+        <div class="details-item">
+          <strong>${index + 1}. Service:</strong> ${service.serviceName} - ${service.serviceTypeName}
+        </div>
+        ${service.servicePrice ? `
+        <div class="details-item">
+          <strong>Price:</strong> ${service.servicePrice}
+        </div>` : ""}
+        ${service.serviceDuration ? `
+        <div class="details-item">
+          <strong>Duration:</strong> ${service.serviceDuration}
+        </div>` : ""}
+      `)
         .join('')
     } else {
       servicesHtml = `
       <div class="details-item">
         <strong>Service:</strong> ${appointment.serviceTypeName || appointment.serviceName || appointment.service || 'N/A'}
-      </div>`
-      
-      if (appointment.servicePrice) {
-        servicesHtml += `
-        <div class="details-item">
-          <strong>Price:</strong> ${appointment.servicePrice}
-        </div>`
-      }
-      
-      if (appointment.serviceDuration) {
-        servicesHtml += `
-        <div class="details-item">
-          <strong>Duration:</strong> ${appointment.serviceDuration}
-        </div>`
-      }
+      </div>
+      ${appointment.servicePrice ? `
+      <div class="details-item">
+        <strong>Price:</strong> ${appointment.servicePrice}
+      </div>` : ""}
+      ${appointment.serviceDuration ? `
+      <div class="details-item">
+        <strong>Duration:</strong> ${appointment.serviceDuration}
+      </div>` : ""}
+    `;
     }
 
     // Create email HTML
     const emailHtml = `
     <!DOCTYPE html>
-    <html>
-      <head>
-        <style>
-          body {
-            font-family: Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
-          }
-          .container {
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-          }
-          .header {
-            text-align: center;
-            padding: 20px 0;
-            border-bottom: 1px solid #e0e0e0;
-            margin-bottom: 20px;
-          }
-          .logo {
-            max-width: 200px;
-            height: auto;
-            margin-bottom: 10px;
-          }
-          .details {
-            margin: 20px 0;
-          }
-          .details-item {
-            margin-bottom: 10px;
-            padding: 10px;
-            background-color: #fff5f5;
-            border-radius: 5px;
-            border-left: 4px solid #ff6b6b;
-          }
-          .footer {
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid #e0e0e0;
-            text-align: center;
-            font-size: 14px;
-            color: #666;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <img src="${getLogoUrl()}" alt="Pearl4Nails Logo" class="logo">
-            <h1>Appointment Cancellation</h1>
-          </div>
-          
-          <div class="details">
-            <div class="details-item" style="background-color: #ffebee; border-left-color: #f44336;">
-              <h2 style="color: #d32f2f; margin: 0;">An appointment has been cancelled</h2>
-            </div>
-            
-            <h3 style="margin-top: 20px;">Appointment Details</h3>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Appointment Cancellation Notification</title>
+      ${emailStyles}
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <img src="${getLogoUrl()}" alt="Pearl4Nails Logo" style="max-width: 200px;" />
+          <h1 style="color: #ff69b4; font-size: 24px; margin: 10px 0;">Appointment Cancellation</h1>
+        </div>
+
+        <div style="padding: 20px;">
+          <p>An appointment has been cancelled.</p>
+
+          <div class="appointment-details">
+            <h3 style="color: #ff69b4; margin: 0 0 15px 0; font-size: 18px;">Cancelled Appointment Details</h3>
             <div class="details-item">
               <strong>Appointment ID:</strong> ${appointment.appointmentId || 'N/A'}
             </div>
@@ -296,11 +258,15 @@ export const sendOwnerCancellationNotification = async (appointment: any) => {
             <div class="details-item">
               <strong>Time:</strong> ${appointment.time}
             </div>
-            
-            <h3 style="margin-top: 20px;">Services</h3>
+          </div>
+
+          <div class="appointment-details">
+            <h3 style="color: #ff69b4; margin: 0 0 15px 0; font-size: 18px;">Services</h3>
             ${servicesHtml}
-            
-            <h3 style="margin-top: 20px;">Client Information</h3>
+          </div>
+
+          <div class="appointment-details">
+            <h3 style="color: #ff69b4; margin: 0 0 15px 0; font-size: 18px;">Client Information</h3>
             <div class="details-item">
               <strong>Name:</strong> ${appointment.name}
             </div>
@@ -314,25 +280,23 @@ export const sendOwnerCancellationNotification = async (appointment: any) => {
             <div class="details-item">
               <strong>Notes:</strong> ${appointment.notes}
             </div>` : ''}
-            
-            <div class="details-item" style="margin-top: 20px; background-color: #f5f5f5; border-left-color: #9e9e9e;">
-              <strong>Status:</strong> <span style="color: #d32f2f; font-weight: bold;">CANCELLED</span>
-            </div>
           </div>
+
+          <p>This is an automated notification.</p>
           
-          <div class="footer">
-            <p>This is an automated notification. Please do not reply to this email.</p>
-            <p>&copy; ${new Date().getFullYear()} Pearl4Nails. All rights reserved.</p>
-          </div>
+          <p>Best regards,<br>Pearl4Nails System</p>
         </div>
-      </body>
+      </div>
+    </body>
     </html>
     `
 
-    // Send email
-    await transporter.sendMail({
-      from: `"Pearl4Nails Notifications" <${process.env.EMAIL_USER}>`,
-      to: process.env.EMAIL_USER || '',
+    // Send cancellation email using Resend
+    await resend.emails.send({
+      from: process.env.EMAIL_FROM || 'Pearl4Nails <noreply@pearl4nails.com>',
+      to: process.env.NODE_ENV === 'production'
+        ? (process.env.EMAIL_FROM || 'noreply@pearl4nails.com')
+        : (process.env.TEST_EMAIL || 'onboarding@resend.dev'),
       subject: `Appointment Cancelled: ${appointment.name} - ${formattedDate} at ${appointment.time}`,
       html: emailHtml,
     })
@@ -359,69 +323,35 @@ export const sendOwnerTrainingNotification = async (registration: any) => {
     // Create email HTML
     const emailHtml = `
     <!DOCTYPE html>
-    <html>
-      <head>
-        <style>
-          body {
-            font-family: Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
-          }
-          .container {
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-          }
-          .header {
-            text-align: center;
-            padding: 20px 0;
-            border-bottom: 1px solid #e0e0e0;
-            margin-bottom: 20px;
-          }
-          .logo {
-            max-width: 200px;
-            height: auto;
-            margin-bottom: 10px;
-          }
-          .details {
-            margin: 20px 0;
-          }
-          .details-item {
-            margin-bottom: 10px;
-            padding: 10px;
-            background-color: #f9f9f9;
-            border-radius: 5px;
-            border-left: 4px solid #ff69b4;
-          }
-          .footer {
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid #e0e0e0;
-            text-align: center;
-            font-size: 14px;
-            color: #666;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <img src="${getLogoUrl()}" alt="Pearl4Nails Logo" class="logo">
-            <h1>New Training Registration</h1>
-          </div>
-          
-          <div class="details">
-            <h2>Registration Details</h2>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>New Training Registration Notification</title>
+      ${emailStyles}
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <img src="${getLogoUrl()}" alt="Pearl4Nails Logo" style="max-width: 200px;" />
+          <h1 style="color: #ff69b4; font-size: 24px; margin: 10px 0;">New Training Registration</h1>
+        </div>
+
+        <div style="padding: 20px;">
+          <p>A new training registration has been received!</p>
+
+          <div class="appointment-details">
+            <h3 style="color: #ff69b4; margin: 0 0 15px 0; font-size: 18px;">Registration Details</h3>
             <div class="details-item">
               <strong>Registration ID:</strong> ${registration.id || 'N/A'}
             </div>
             <div class="details-item">
               <strong>Registration Date:</strong> ${formattedDate}
             </div>
-            
-            <h3 style="margin-top: 20px;">Course Information</h3>
+          </div>
+
+          <div class="appointment-details">
+            <h3 style="color: #ff69b4; margin: 0 0 15px 0; font-size: 18px;">Course Information</h3>
             <div class="details-item">
               <strong>Course:</strong> ${registration.course || 'N/A'}
             </div>
@@ -434,8 +364,10 @@ export const sendOwnerTrainingNotification = async (registration: any) => {
             <div class="details-item">
               <strong>Price:</strong> ${registration.price || 'N/A'}
             </div>
-            
-            <h3 style="margin-top: 20px;">Student Information</h3>
+          </div>
+
+          <div class="appointment-details">
+            <h3 style="color: #ff69b4; margin: 0 0 15px 0; font-size: 18px;">Student Information</h3>
             <div class="details-item">
               <strong>Full Name:</strong> ${registration.fullName}
             </div>
@@ -450,20 +382,22 @@ export const sendOwnerTrainingNotification = async (registration: any) => {
               <strong>Message:</strong> ${registration.message}
             </div>` : ''}
           </div>
+
+          <p>This is an automated notification.</p>
           
-          <div class="footer">
-            <p>This is an automated notification. Please do not reply to this email.</p>
-            <p>&copy; ${new Date().getFullYear()} Pearl4Nails. All rights reserved.</p>
-          </div>
+          <p>Best regards,<br>Pearl4Nails System</p>
         </div>
-      </body>
+      </div>
+    </body>
     </html>
     `
 
-    // Send email
-    await transporter.sendMail({
-      from: `"Pearl4Nails Training" <${process.env.EMAIL_USER}>`,
-      to: process.env.EMAIL_USER || '',
+    // Send training notification email using Resend
+    await resend.emails.send({
+      from: process.env.EMAIL_FROM || 'Pearl4Nails <noreply@pearl4nails.com>',
+      to: process.env.NODE_ENV === 'production'
+        ? (process.env.EMAIL_FROM || 'noreply@pearl4nails.com')
+        : (process.env.TEST_EMAIL || 'onboarding@resend.dev'),
       subject: `New Training Registration From: ${registration.fullName} - ${registration.course || 'Training'}`,
       html: emailHtml,
     })

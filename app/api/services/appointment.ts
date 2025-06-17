@@ -255,7 +255,7 @@ export async function getAvailableTimeSlots(searchDate: string): Promise<{ time:
           durationMinutes = parseDurationToMinutes(appointment.totalDuration)
         } else if (appointment.services && appointment.services.length > 0) {
           // Sum up durations of all services
-          durationMinutes = appointment.services.reduce((total, service) => {
+          durationMinutes = appointment.services.reduce((total: number, service: any) => {
             return total + parseDurationToMinutes(service.duration || "60 minutes")
           }, 0)
         } else if (appointment.serviceDuration) {

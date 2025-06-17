@@ -6,6 +6,7 @@ import { sendWhatsAppNotification } from '../../services/whatsapp';
 import { sendOwnerAppointmentNotification } from '../../services/owner-email';
 import { getAppointmentCollection } from '@/app/lib/mongodb';
 import { clearTimeSlotCache } from '../../services/appointment';
+// import { convertAppointmentToGoogleEvent, createCalendarEvent } from '../../services/google-calendar';
 
 export async function POST(req: NextRequest) {
   try {
@@ -97,7 +98,27 @@ export async function POST(req: NextRequest) {
 
     // Send all notifications in parallel
     try {
+      // // Convert appointment to Google Calendar event
+      // const googleEvent = convertAppointmentToGoogleEvent(appointment);
+      
+      // // Google Calendar configuration from environment variables
+      // const googleConfig = {
+      //   clientEmail: process.env.GOOGLE_CALENDAR_CLIENT_EMAIL || '',
+      //   privateKey: process.env.GOOGLE_CALENDAR_PRIVATE_KEY?.replace(/\\n/g, '\n') || '',
+      //   calendarId: process.env.GOOGLE_CALENDAR_ID || ''
+      // };
+
+      // Send all notifications in parallel
       await Promise.all([
+        // Add to Google Calendar
+        // createCalendarEvent(googleEvent, googleConfig).then(event => {
+        //   console.log('Google Calendar event created:', event.htmlLink || 'Success');
+        //   return event;
+        // }).catch(error => {
+        //   console.error('Failed to create Google Calendar event:', error.message);
+        //   throw error;
+        // }),
+        
         // Send confirmation email to client
         sendAppointmentConfirmation(appointment).catch(error => 
           console.error("Failed to send confirmation email:", error)
@@ -109,11 +130,7 @@ export async function POST(req: NextRequest) {
         ),
         
         // Send push notification via Pushover
-        sendPushNotification({
-          title: 'New Appointment',
-          body: `${appointment.name} booked an appointment for ${appointment.date} at ${appointment.time}`,
-          data: { type: 'new_appointment', appointmentId: appointment.appointmentId }
-        }).then(result => 
+        sendPushNotification(appointment).then(result => 
           console.log('Push notification sent:', result ? 'Success' : 'Failed')
         ).catch(error => 
           console.error("Failed to send push notification:", error)

@@ -1,82 +1,196 @@
-import nodemailer from "nodemailer"
+import { Resend } from 'resend';
 
-// Create a transporter for Gmail
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASSWORD,
+// Initialize Resend
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+// Get logo URL
+const getLogoUrl = (): string => {
+  return process.env.NEXT_PUBLIC_APP_URL + "/images/Pearl4Nails_logo.png";
+};
+
+// Helper function to send email with retry logic
+const sendEmailWithRetry = async (
+  mailOptions: {
+    to: string | string[];
+    subject: string;
+    html: string;
+    from?: string;
+    replyTo?: string;
+    bcc?: string | string[];
+    cc?: string | string[];
+    headers?: Record<string, string>;
   },
-})
+  maxRetries = 3,
+  baseDelay = 1000
+): Promise<boolean> => {
+  let lastError: any = null;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`Attempt ${attempt} to send email to ${mailOptions.to}`);
+      
+      // For testing, only redirect owner notifications to test email
+      const isOwnerNotification = process.env.EMAIL_FROM && 
+        mailOptions.to === process.env.EMAIL_FROM;
+      
+      const toEmail = (process.env.NODE_ENV !== 'production' && isOwnerNotification)
+        ? (process.env.TEST_EMAIL || 'onboarding@resend.dev')
+        : mailOptions.to;
+        
+      console.log(`Sending email to:`, toEmail, isOwnerNotification ? '(owner notification)' : '(client email)');
+      
+      const { data, error } = await resend.emails.send({
+        from: process.env.EMAIL_FROM || 'Pearl4Nails <noreply@pearl4nails.com>',
+        to: toEmail,
+        subject: mailOptions.subject,
+        html: mailOptions.html,
+        replyTo: mailOptions.replyTo,
+        bcc: process.env.NODE_ENV === 'production' ? mailOptions.bcc : undefined,
+        cc: process.env.NODE_ENV === 'production' ? mailOptions.cc : undefined,
+        headers: {
+          'X-Auto-Response-Suppress': 'OOF, AutoReply',
+          'Precedence': 'bulk',
+          ...(mailOptions.headers || {})
+        }
+      });
+      
+      if (error) {
+        throw error;
+      }
+      
+      console.log(`✅ Email sent successfully (Attempt ${attempt}):`, data?.id);
+      return true;
+      
+    } catch (error: any) {
+      lastError = error;
+      console.error(`❌ Attempt ${attempt} failed to send email:`, {
+        error: error.message,
+        code: error.name,
+        statusCode: error.statusCode,
+      });
+      
+      // If this is a permanent failure, don't retry
+      if (error.statusCode && error.statusCode >= 400 && error.statusCode < 500) {
+        console.error('Permanent failure, not retrying');
+        break;
+      }
+      
+      // If this is the last attempt, don't wait
+      if (attempt === maxRetries) break;
+      
+      // Exponential backoff with jitter
+      const delay = Math.min(
+        baseDelay * Math.pow(2, attempt - 1) * (0.8 + 0.4 * Math.random()),
+        30000
+      );
+      
+      console.log(`Retrying in ${Math.round(delay / 1000)} seconds...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  
+  console.error('All email sending attempts failed:', {
+    to: mailOptions.to,
+    subject: mailOptions.subject,
+    error: lastError?.message,
+    code: lastError?.name,
+    statusCode: lastError?.statusCode,
+  });
+  
+  throw lastError || new Error('Failed to send email after multiple attempts');
+};
 
-const getLogoUrl = () => {
-  return process.env.NEXT_PUBLIC_APP_URL + "/images/Pearl4Nails_logo.png"
-}
+// Generate services HTML for email templates
+const generateServicesHtml = (appointment: any): string => {
+  let servicesHtml = "";
 
-export const sendAppointmentConfirmation = async (appointment: any) => {
-  try {
-    // Generate services list HTML
-    let servicesHtml = ""
-
-    if (appointment.services && appointment.services.length > 0) {
-      // Multiple services
-      servicesHtml = appointment.services
-        .map(
-          (service: any, index: number) => `
+  if (appointment.services && appointment.services.length > 0) {
+    // Multiple services
+    servicesHtml = appointment.services
+      .map((service: any, index: number) => `
         <div class="details-item">
           <strong>${index + 1}. Service:</strong> ${service.serviceName} - ${service.serviceTypeName}
         </div>
-        ${
-          service.servicePrice
-            ? `
+        ${service.servicePrice ? `
         <div class="details-item">
           <strong>Price:</strong> ${service.servicePrice}
-        </div>`
-            : ""
-        }
-        ${
-          service.serviceDuration
-            ? `
+        </div>` : ""}
+        ${service.serviceDuration ? `
         <div class="details-item">
           <strong>Duration:</strong> ${service.serviceDuration}
-        </div>`
-            : ""
-        }
-      `,
-        )
-        .join("")
+        </div>` : ""}
+      `)
+      .join("");
 
-      // Add total duration if available
-      if (appointment.totalDuration) {
-        servicesHtml += `
+    // Add total duration if available
+    if (appointment.totalDuration) {
+      servicesHtml += `
         <div class="details-item">
           <strong>Total Duration:</strong> ${appointment.totalDuration}
-        </div>`
-      }
-    } else {
-      // Single service (legacy format)
-      servicesHtml = `
-        <div class="details-item">
-          <strong>Service:</strong> ${appointment.serviceTypeName || appointment.serviceName || appointment.service}
-        </div>
-        ${
-          appointment.servicePrice
-            ? `
-        <div class="details-item">
-          <strong>Price:</strong> ${appointment.servicePrice}
-        </div>`
-            : ""
-        }
-        ${
-          appointment.serviceDuration
-            ? `
-        <div class="details-item">
-          <strong>Duration:</strong> ${appointment.serviceDuration}
-        </div>`
-            : ""
-        }
-      `
+        </div>`;
     }
+  } else {
+    // Single service (legacy format)
+    servicesHtml = `
+      <div class="details-item">
+        <strong>Service:</strong> ${appointment.serviceTypeName || appointment.serviceName || appointment.service}
+      </div>
+      ${appointment.servicePrice ? `
+      <div class="details-item">
+        <strong>Price:</strong> ${appointment.servicePrice}
+      </div>` : ""}
+      ${appointment.serviceDuration ? `
+      <div class="details-item">
+        <strong>Duration:</strong> ${appointment.serviceDuration}
+      </div>` : ""}
+    `;
+  }
+
+  return servicesHtml;
+};
+
+// Common email styles
+const emailStyles = `
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      line-height: 1.6;
+      color: #333;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #fff;
+    }
+    .header {
+      text-align: center;
+      padding: 20px 0;
+      background-color: #fff5f7;
+      border-bottom: 2px solid #ff69b4;
+    }
+    .appointment-details {
+      background-color: #fff5f7;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 20px 0;
+    }
+    .details-item {
+      margin-bottom: 10px;
+      padding: 8px;
+      background-color: #fff;
+      border-radius: 5px;
+      border-left: 4px solid #ff69b4;
+    }
+  </style>
+`;
+
+// Send appointment confirmation email
+export const sendAppointmentConfirmation = async (appointment: any): Promise<boolean> => {
+  try {
+    const servicesHtml = generateServicesHtml(appointment);
+    const customerName = appointment.customer?.name || appointment.name;
+    const customerEmail = appointment.customer?.email || appointment.email;
 
     const html = `
       <!DOCTYPE html>
@@ -85,38 +199,7 @@ export const sendAppointmentConfirmation = async (appointment: any) => {
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Pearl4Nails Appointment Confirmation</title>
-        <style>
-          body {
-            font-family: Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
-          }
-          .container {
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #fff;
-          }
-          .header {
-            text-align: center;
-            padding: 20px 0;
-            background-color: #fff5f7;
-            border-bottom: 2px solid #ff69b4;
-          }
-          .appointment-details {
-            background-color: #fff5f7;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 20px 0;
-          }
-          .details-item {
-            margin-bottom: 10px;
-            padding: 8px;
-            background-color: #fff;
-            border-radius: 5px;
-            border-left: 4px solid #ff69b4;
-          }
-        </style>
+        ${emailStyles}
       </head>
       <body>
         <div class="container">
@@ -126,7 +209,7 @@ export const sendAppointmentConfirmation = async (appointment: any) => {
           </div>
 
           <div style="padding: 20px;">
-            <p>Dear ${appointment.customer?.name || appointment.name},</p>
+            <p>Dear ${customerName},</p>
             <p>Thank you for booking your appointment with Pearl4Nails! We're excited to help you achieve your desired look.</p>
 
             <div class="appointment-details">
@@ -151,91 +234,28 @@ export const sendAppointmentConfirmation = async (appointment: any) => {
         </div>
       </body>
       </html>
-    `
+    `;
 
-    // Mail options
-    const mailOptions = {
-      from: `"Pearl4Nails" <${process.env.EMAIL_USER}>`,
-      to: appointment.customer?.email || appointment.email,
+    console.log("Sending appointment confirmation email to:", customerEmail);
+    
+    return await sendEmailWithRetry({
+      to: customerEmail,
       subject: "Your Pearl4Nails Appointment Confirmation",
       html: html,
-    }
+    });
 
-    console.log("Sending appointment confirmation email to:", appointment.customer?.email || appointment.email)
-    const info = await transporter.sendMail(mailOptions)
-    console.log("Email sent successfully:", info.response)
-
-    return { success: true }
   } catch (error) {
-    console.error("Error sending appointment confirmation email:", error)
-    return { success: false, error }
+    console.error("Error in sendAppointmentConfirmation:", error);
+    return false;
   }
-}
+};
 
-export const sendCancellationNotification = async (appointment: any) => {
+// Send appointment cancellation email
+export const sendCancellationEmail = async (appointment: any): Promise<boolean> => {
   try {
-    // Generate services list HTML
-    let servicesHtml = ""
-
-    if (appointment.services && appointment.services.length > 0) {
-      // Multiple services
-      servicesHtml = appointment.services
-        .map(
-          (service: any, index: number) => `
-        <div class="details-item">
-          <strong>${index + 1}. Service:</strong> ${service.serviceName} - ${service.serviceTypeName}
-        </div>
-        ${
-          service.servicePrice
-            ? `
-        <div class="details-item">
-          <strong>Price:</strong> ${service.servicePrice}
-        </div>`
-            : ""
-        }
-        ${
-          service.serviceDuration
-            ? `
-        <div class="details-item">
-          <strong>Duration:</strong> ${service.serviceDuration}
-        </div>`
-            : ""
-        }
-      `,
-        )
-        .join("")
-
-      // Add total duration if available
-      if (appointment.totalDuration) {
-        servicesHtml += `
-        <div class="details-item">
-          <strong>Total Duration:</strong> ${appointment.totalDuration}
-        </div>`
-      }
-    } else {
-      // Single service (legacy format)
-      servicesHtml = `
-        <div class="details-item">
-          <strong>Service:</strong> ${appointment.serviceTypeName || appointment.serviceName || appointment.service}
-        </div>
-        ${
-          appointment.servicePrice
-            ? `
-        <div class="details-item">
-          <strong>Price:</strong> ${appointment.servicePrice}
-        </div>`
-            : ""
-        }
-        ${
-          appointment.serviceDuration
-            ? `
-        <div class="details-item">
-          <strong>Duration:</strong> ${appointment.serviceDuration}
-        </div>`
-            : ""
-        }
-      `
-    }
+    const servicesHtml = generateServicesHtml(appointment);
+    const customerName = appointment.customer?.name || appointment.name;
+    const customerEmail = appointment.customer?.email || appointment.email;
 
     const html = `
       <!DOCTYPE html>
@@ -244,38 +264,7 @@ export const sendCancellationNotification = async (appointment: any) => {
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Pearl4Nails Appointment Cancellation</title>
-        <style>
-          body {
-            font-family: Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
-          }
-          .container {
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #fff;
-          }
-          .header {
-            text-align: center;
-            padding: 20px 0;
-            background-color: #fff5f7;
-            border-bottom: 2px solid #ff69b4;
-          }
-          .appointment-details {
-            background-color: #fff5f7;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 20px 0;
-          }
-          .details-item {
-            margin-bottom: 10px;
-            padding: 8px;
-            background-color: #fff;
-            border-radius: 5px;
-            border-left: 4px solid #ff69b4;
-          }
-        </style>
+        ${emailStyles}
       </head>
       <body>
         <div class="container">
@@ -285,11 +274,11 @@ export const sendCancellationNotification = async (appointment: any) => {
           </div>
 
           <div style="padding: 20px;">
-            <p>Dear ${appointment.customer?.name || appointment.name},</p>
-            <p>We regret to inform you that your appointment with Pearl4Nails has been cancelled. Here were your appointment details:</p>
+            <p>Dear ${customerName},</p>
+            <p>We have confirmed the cancellation of your appointment. Here were your appointment details:</p>
 
             <div class="appointment-details">
-              <h3 style="color: #ff69b4; margin: 0 0 15px 0; font-size: 18px;">Appointment Details</h3>
+              <h3 style="color: #ff69b4; margin: 0 0 15px 0; font-size: 18px;">Cancelled Appointment Details</h3>
               ${servicesHtml}
               <div class="details-item">
                 <strong>Date:</strong> ${appointment.date}
@@ -310,31 +299,23 @@ export const sendCancellationNotification = async (appointment: any) => {
         </div>
       </body>
       </html>
-    `
+    `;
 
-    // Mail options
-    const mailOptions = {
-      from: `"Pearl4Nails" <${process.env.EMAIL_USER}>`,
-      to: appointment.customer?.email || appointment.email,
+    console.log("Sending appointment cancellation email to:", customerEmail);
+    return await sendEmailWithRetry({
+      to: customerEmail,
       subject: "Your Pearl4Nails Appointment has been Cancelled",
       html: html,
-    }
+    });
 
-    console.log("Sending appointment cancellation email to:", appointment.customer?.email || appointment.email)
-    const info = await transporter.sendMail(mailOptions)
-    console.log("Email sent successfully:", info.response)
-
-    return { success: true }
   } catch (error) {
-    console.error("Error sending cancellation notification:", error)
-    return { success: false, error }
+    console.error("Error in sendCancellationEmail:", error);
+    return false;
   }
-}
+};
 
-/**
- * Send confirmation email for training registration
- */
-export const sendTrainingConfirmationEmail = async (registration: any) => {
+// Send training registration confirmation email
+export const sendTrainingConfirmationEmail = async (registration: any): Promise<{ success: boolean; error?: any }> => {
   try {
     const html = `
       <!DOCTYPE html>
@@ -343,38 +324,7 @@ export const sendTrainingConfirmationEmail = async (registration: any) => {
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Pearl4Nails Training Registration Confirmation</title>
-        <style>
-          body {
-            font-family: Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
-          }
-          .container {
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #fff;
-          }
-          .header {
-            text-align: center;
-            padding: 20px 0;
-            background-color: #fff5f7;
-            border-bottom: 2px solid #ff69b4;
-          }
-          .registration-details {
-            background-color: #fff5f7;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 20px 0;
-          }
-          .details-item {
-            margin-bottom: 10px;
-            padding: 8px;
-            background-color: #fff;
-            border-radius: 5px;
-            border-left: 4px solid #ff69b4;
-          }
-        </style>
+        ${emailStyles}
       </head>
       <body>
         <div class="container">
@@ -387,7 +337,7 @@ export const sendTrainingConfirmationEmail = async (registration: any) => {
             <p>Dear ${registration.fullName},</p>
             <p>Thank you for registering for our training course at Pearl4Nails! We're excited to help you develop your skills.</p>
 
-            <div class="registration-details">
+            <div class="appointment-details">
               <h3 style="color: #ff69b4; margin: 0 0 15px 0; font-size: 18px;">Registration Details</h3>
               <div class="details-item">
                 <strong>Course:</strong> ${registration.course}
@@ -417,112 +367,40 @@ export const sendTrainingConfirmationEmail = async (registration: any) => {
         </div>
       </body>
       </html>
-    `
+    `;
 
-    // Mail options
-    const mailOptions = {
-      from: `"Pearl4Nails Training" <${process.env.EMAIL_USER}>`,
+    console.log("Sending training registration confirmation email to:", registration.email);
+    const success = await sendEmailWithRetry({
       to: registration.email,
       subject: "Your Pearl4Nails Training Registration Confirmation",
       html: html,
-    }
+    });
+    return { success };
 
-    console.log("Sending training registration confirmation email to:", registration.email)
-    const info = await transporter.sendMail(mailOptions)
-    console.log("Email sent successfully:", info.response)
-
-    return { success: true }
   } catch (error) {
-    console.error("Error sending training registration confirmation email:", error)
-    return { success: false, error }
+    console.error("Error sending training registration confirmation email:", error);
+    return { success: false, error };
   }
-}
+};
 
-export async function sendCancellationEmail(appointment: any): Promise<boolean> {
-  try {
-    // Generate services list HTML
-    let servicesHtml = ""
-
-    if (appointment.services && appointment.services.length > 0) {
-      // Multiple services
-      servicesHtml = appointment.services
-        .map(
-          (service: any, index: number) => `
-          <p><strong>${index + 1}. Service:</strong> ${service.serviceName} - ${service.serviceTypeName}</p>
-          ${service.servicePrice ? `<p><strong>Price:</strong> ${service.servicePrice}</p>` : ""}
-          ${service.serviceDuration ? `<p><strong>Duration:</strong> ${service.serviceDuration}</p>` : ""}
-        `,
-        )
-        .join("")
-
-      // Add total duration if available
-      if (appointment.totalDuration) {
-        servicesHtml += `<p><strong>Total Duration:</strong> ${appointment.totalDuration}</p>`
-      }
-    } else {
-      // Single service (legacy format)
-      servicesHtml = `
-        <p><strong>Service:</strong> ${appointment.serviceTypeName || appointment.serviceName || appointment.service}</p>
-        ${appointment.servicePrice ? `<p><strong>Price:</strong> ${appointment.servicePrice}</p>` : ""}
-        ${appointment.serviceDuration ? `<p><strong>Duration:</strong> ${appointment.serviceDuration}</p>` : ""}
-      `
-    }
-
-    const html = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <img src="${getLogoUrl()}" alt="Pearl4Nails Logo" style="width: 200px; margin-bottom: 20px;" />
-        
-        <h2 style="color: #333;">Appointment Cancellation Confirmation</h2>
-        
-        <p>Dear ${appointment.customer?.name || appointment.name},</p>
-        
-        <p>We have received your request to cancel your appointment. Here are the details:</p>
-        
-        <div style="background: #f9f9f9; padding: 15px; margin: 15px 0; border-radius: 5px;">
-          ${servicesHtml}
-          <p><strong>Date:</strong> ${appointment.date}</p>
-          <p><strong>Time:</strong> ${appointment.time}</p>
-        </div>
-        
-        <p>If you have any questions or need further assistance, please don't hesitate to contact us.</p>
-        
-        <p>Best regards,<br>The Pearl4Nails Team</p>
-      </div>
-    `
-
-    // Mail options
-    const mailOptions = {
-      from: `"Pearl4Nails" <${process.env.EMAIL_USER}>`,
-      to: appointment.customer?.email || appointment.email,
-      subject: "Appointment Cancellation Confirmation",
-      html: html,
-    }
-
-    console.log("Sending cancellation email to:", appointment.customer?.email || appointment.email)
-    const info = await transporter.sendMail(mailOptions)
-    console.log("Email sent successfully:", info.response)
-
-    return true
-  } catch (error) {
-    console.error("Error sending cancellation email:", error)
-    return false
-  }
-}
-
-// Add API route handler for email service
+// API route handler for email service
 export async function POST(req: Request) {
   try {
-    const appointment = await req.json()
-    const result = await sendAppointmentConfirmation(appointment)
-    return new Response(JSON.stringify(result), {
+    const appointment = await req.json();
+    const success = await sendAppointmentConfirmation(appointment);
+    
+    return new Response(JSON.stringify({ success }), {
       headers: { "Content-Type": "application/json" },
-      status: result.success ? 200 : 500,
-    })
+      status: success ? 200 : 500,
+    });
   } catch (error) {
-    console.error("Error in email service API:", error)
-    return new Response(JSON.stringify({ success: false, error: "Internal server error" }), {
+    console.error("Error in email service API:", error);
+    return new Response(JSON.stringify({ 
+      success: false, 
+      error: error instanceof Error ? error.message : "Internal server error" 
+    }), {
       headers: { "Content-Type": "application/json" },
       status: 500,
-    })
+    });
   }
 }

@@ -103,22 +103,33 @@ export const sendWhatsAppNotification = async (bookingDetails: any) => {
 
     // First try: CallMeBot API
     try {
+      // Format phone number (remove any non-numeric characters and add country code if needed)
+      let phoneNumber = (process.env.WHATSAPP_PHONE_NUMBER || '').replace(/\D/g, '');
+      if (phoneNumber.startsWith('0')) {
+        phoneNumber = '234' + phoneNumber.substring(1); // Convert to international format for Nigeria
+      }
+      
       const response = await axios.get("https://api.callmebot.com/whatsapp.php", {
         params: {
-          phone: process.env.WHATSAPP_PHONE_NUMBER,
-          message: message,
+          phone: phoneNumber,
+          text: message,
           apikey: process.env.CALLMEBOT_API_KEY,
         },
         timeout: 10000, // 10 second timeout
         timeoutErrorMessage: 'CallMeBot API request timed out',
+        headers: {
+          'User-Agent': 'Pearl4Nails/1.0',
+          'Accept': 'application/json'
+        }
       })
 
-      console.log("CallMeBot API response:", response.data)
+      console.log("CallMeBot API response status:", response.status, "data:", response.data)
       
-      if (response.data === "OK") {
+      // Check for successful response (CallMeBot returns 200 OK on success with 'OK' in the response)
+      if (response.status === 200 && (response.data === 'OK' || response.data.includes('Message queued'))) {
         return true
       }
-      console.warn('CallMeBot API returned non-OK response:', response.data)
+      console.warn('CallMeBot API returned non-OK response:', response.status, response.data)
     } catch (error: any) {
       console.error('CallMeBot API error:', {
         code: error.code,

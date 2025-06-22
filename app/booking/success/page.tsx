@@ -37,6 +37,10 @@ interface BookingDetails {
   serviceDuration?: string
   services?: ServiceDetails[]
   totalDuration?: string
+  totalPrice?: {
+    min: number
+    max: number
+  }
   date: string
   time: string
   nailShape?: string | null
@@ -86,6 +90,17 @@ export default function BookingSuccessPage() {
       if (status === "cancelled") {
         router.push("/booking/cancelled")
         return
+      }
+
+      // Parse total price from URL
+      const totalPriceParam = searchParams.get("totalPrice");
+      let totalPrice = { min: 0, max: 0 };
+      if (totalPriceParam) {
+        try {
+          totalPrice = JSON.parse(totalPriceParam);
+        } catch (error) {
+          console.error("Error parsing total price:", error);
+        }
       }
 
       const preparation =
@@ -163,6 +178,7 @@ export default function BookingSuccessPage() {
             phone: "09160763206",
           },
           preparation,
+          totalPrice,
           appointmentId: searchParams.get("appointmentId") || "AP123456",
         }
 
@@ -246,6 +262,11 @@ export default function BookingSuccessPage() {
         if (bookingDetails.totalDuration) {
           description += `\n\nTotal Duration: ${bookingDetails.totalDuration}`;
         }
+        if (bookingDetails.totalPrice) {
+          description += `\n\nTotal Price: ${bookingDetails.totalPrice.min === bookingDetails.totalPrice.max
+            ? `₦${bookingDetails.totalPrice.min.toLocaleString()}`
+            : `₦${bookingDetails.totalPrice.min.toLocaleString()} - ₦${bookingDetails.totalPrice.max.toLocaleString()}`}`
+        }
       } else {
         // Single service (legacy format)
         const serviceName = bookingDetails.serviceTypeName || bookingDetails.serviceName || bookingDetails.service || "Appointment";
@@ -258,6 +279,11 @@ export default function BookingSuccessPage() {
         }
         if (bookingDetails.serviceDuration) {
           description += `\nDuration: ${bookingDetails.serviceDuration}`;
+        }
+        if (bookingDetails.totalPrice) {
+          description += `\nTotal Price: ${bookingDetails.totalPrice.min === bookingDetails.totalPrice.max
+            ? `₦${bookingDetails.totalPrice.min.toLocaleString()}`
+            : `₦${bookingDetails.totalPrice.min.toLocaleString()} - ₦${bookingDetails.totalPrice.max.toLocaleString()}`}`
         }
       }
 
@@ -331,6 +357,11 @@ export default function BookingSuccessPage() {
 
         if (bookingDetails.totalDuration) {
           servicesText += `\nTotal Duration: ${bookingDetails.totalDuration}`
+        }
+        if (bookingDetails.totalPrice) {
+          servicesText += `\nTotal Price: ${bookingDetails.totalPrice.min === bookingDetails.totalPrice.max
+            ? `₦${bookingDetails.totalPrice.min.toLocaleString()}`
+            : `₦${bookingDetails.totalPrice.min.toLocaleString()} - ₦${bookingDetails.totalPrice.max.toLocaleString()}`}`
         }
       } else {
         // Single service
@@ -422,6 +453,16 @@ export default function BookingSuccessPage() {
               <p className="font-medium">{bookingDetails.totalDuration}</p>
             </>
           )}
+          {bookingDetails.totalPrice && (
+            <>
+              <p className="text-gray-600">Total Price:</p>
+              <p className="font-medium">
+                {bookingDetails.totalPrice.min === bookingDetails.totalPrice.max
+                  ? `₦${bookingDetails.totalPrice.min.toLocaleString()}`
+                  : `₦${bookingDetails.totalPrice.min.toLocaleString()} - ₦${bookingDetails.totalPrice.max.toLocaleString()}`}
+              </p>
+            </>
+          )}
         </>
       )
     } else {
@@ -446,11 +487,22 @@ export default function BookingSuccessPage() {
               <p className="font-medium">{bookingDetails.serviceDuration}</p>
             </>
           )}
+          {bookingDetails.totalPrice && (
+            <>
+              <p className="text-gray-600">Total Price:</p>
+              <p className="font-medium">
+                {bookingDetails.totalPrice.min === bookingDetails.totalPrice.max
+                  ? `₦${bookingDetails.totalPrice.min.toLocaleString()}`
+                  : `₦${bookingDetails.totalPrice.min.toLocaleString()} - ₦${bookingDetails.totalPrice.max.toLocaleString()}`}
+              </p>
+            </>
+          )}
         </>
       )
     }
   }
 
+// ... (rest of the code remains the same)
   return (
     <main className="min-h-screen py-16 px-4">
       <div className="max-w-4xl mx-auto">
@@ -506,12 +558,12 @@ export default function BookingSuccessPage() {
               )}
 
               {/* Show reference image if uploaded */}
-              {bookingDetails.referenceImage && (
+              {/* {bookingDetails.referenceImage && (
                 <>
                   <p className="text-gray-600">Reference Image:</p>
                   <p className="font-medium text-green-600">Uploaded ✓</p>
                 </>
-              )}
+              )} */}
             </div>
           </div>
 

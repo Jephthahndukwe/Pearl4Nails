@@ -23,11 +23,14 @@ export default function BookingPage() {
   const [selectedServices, setSelectedServices] = useState<string[]>([])
   const [selectedServiceTypes, setSelectedServiceTypes] = useState<Record<string, string>>({})
   const [totalDuration, setTotalDuration] = useState<number>(0)
+  const [totalPrice, setTotalPrice] = useState<{ min: number; max: number }>({ min: 0, max: 0 })
 
   const [selectedTime, setSelectedTime] = useState<string>("")
   const [selectedNailShape, setSelectedNailShape] = useState<string | null>(null)
   const [selectedNailDesign, setSelectedNailDesign] = useState<string | null>(null)
-  const [referenceImage, setReferenceImage] = useState<string | null>(null)
+  const [referenceImage, setReferenceImage] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [selectedLocation, setSelectedLocation] = useState<string>("15 Osolo Way Off 7&8 bus stop, Ajao estate, Lagos, Nigeria")
   const [isBookingComplete, setIsBookingComplete] = useState(false)
   const [tattooLocation, setTattooLocation] = useState<string | null>(null)
@@ -57,6 +60,15 @@ export default function BookingPage() {
     { id: "Rhinestones", name: "Rhinestones" },
   ]
 
+  // Update total duration and price when selected services or service types change
+  useEffect(() => {
+    const newTotalDuration = calculateTotalDuration(selectedServices, selectedServiceTypes)
+    setTotalDuration(newTotalDuration)
+    
+    const newTotalPrice = calculateTotalPrice(selectedServices, selectedServiceTypes)
+    setTotalPrice(newTotalPrice)
+  }, [selectedServices, selectedServiceTypes])
+
   // Duration calculation functions
   const calculateTotalDuration = (services: string[], serviceTypes: Record<string, string>) => {
     let total = 0
@@ -84,6 +96,48 @@ export default function BookingPage() {
     })
 
     return total // Return total minutes
+  }
+
+  const calculateTotalPrice = (services: string[], serviceTypes: Record<string, string>) => {
+    let minPrice = 0
+    let maxPrice = 0
+
+    Object.entries(serviceTypes).forEach(([serviceId, typeId]) => {
+      if (services.includes(serviceId)) {
+        const serviceType = findServiceTypeById(serviceId, typeId)
+        if (serviceType) {
+          const price = serviceType.price.trim()
+
+          try {
+            // Handle price range format: "₦6,000-₦12,000" or "₦6,000 - ₦12,000"
+            const rangeMatch = price.match(/[₦$]?\s*([\d,]+)\s*-\s*[₦$]?\s*([\d,]+)/);
+            if (rangeMatch) {
+              const min = parseInt(rangeMatch[1].replace(/,/g, ''), 10);
+              const max = parseInt(rangeMatch[2].replace(/,/g, ''), 10);
+              if (!isNaN(min) && !isNaN(max)) {
+                minPrice += min;
+                maxPrice += max;
+                return;
+              }
+            }
+            
+            // Handle single price format: "₦6,000" or "₦ 6,000"
+            const singlePriceMatch = price.match(/[₦$]?\s*([\d,]+)/);
+            if (singlePriceMatch) {
+              const amount = parseInt(singlePriceMatch[1].replace(/,/g, ''), 10);
+              if (!isNaN(amount)) {
+                minPrice += amount;
+                maxPrice += amount;
+              }
+            }
+          } catch (error) {
+            console.error('Error parsing price:', price, error);
+            }
+        }
+      }
+    })
+
+    return { min: minPrice, max: maxPrice }
   }
 
   const formatDuration = (minutes: number) => {
@@ -243,6 +297,7 @@ export default function BookingPage() {
             duration: findServiceTypeById(serviceId, selectedServiceTypes[serviceId])?.duration || "",
           })),
           totalDuration: formatDuration(totalDuration),
+          totalPrice: totalPrice,
           date: date?.toLocaleDateString("en-US", {
             year: "numeric",
             month: "2-digit",
@@ -293,6 +348,7 @@ export default function BookingPage() {
       url.searchParams.set("date", date?.toLocaleDateString())
       url.searchParams.set("time", selectedTime)
       url.searchParams.set("totalDuration", formatDuration(totalDuration))
+      url.searchParams.set("totalPrice", JSON.stringify(totalPrice))
 
       // Add location parameter
       if (selectedLocation) {
@@ -359,26 +415,53 @@ export default function BookingPage() {
     })
     setSelectedServiceTypes(updatedServiceTypes)
 
-    // Recalculate duration
+    // Recalculate duration and price
     const newDuration = calculateTotalDuration(selectedServices, updatedServiceTypes)
+    const newPrice = calculateTotalPrice(selectedServices, updatedServiceTypes)
     setTotalDuration(newDuration)
+    setTotalPrice(newPrice)
   }, [selectedServices])
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setReferenceImage(reader.result as string)
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Create preview URL immediately
+    const previewUrl = URL.createObjectURL(file);
+    setPreviewImage(previewUrl);
+    setIsUploading(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to upload image');
       }
-      reader.readAsDataURL(file)
+
+      const result = await response.json();
+      setReferenceImage(result.publicUrl);
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      alert('Failed to upload image. Please try again.');
+      setPreviewImage(null);
+      setReferenceImage(null);
+    } finally {
+      setIsUploading(false);
     }
   }
 
   const removeImage = () => {
-    setReferenceImage(null)
+    setReferenceImage(null);
+    setPreviewImage(null);
     if (fileInputRef.current) {
-      fileInputRef.current.value = ""
+      fileInputRef.current.value = "";
     }
   }
 
@@ -467,6 +550,13 @@ export default function BookingPage() {
 
                 <p className="text-gray-600">Duration:</p>
                 <p className="font-medium">{formatDuration(totalDuration)}</p>
+
+                <p className="text-gray-600">Total Price:</p>
+                <p className="font-medium">
+                  {totalPrice.min === totalPrice.max 
+                    ? `₦${totalPrice.min.toLocaleString()}` 
+                    : `₦${totalPrice.min.toLocaleString()} - ₦${totalPrice.max.toLocaleString()}`}
+                </p>
 
                 {selectedServices.includes("nails") && selectedNailShape && (
                   <>
@@ -704,9 +794,17 @@ export default function BookingPage() {
 
               {totalDuration > 0 && (
                 <div className="mt-6 mb-4 bg-pink-50 p-4 rounded-lg">
-                  <div className="flex justify-between items-center">
-                    <p className="font-medium text-pink-500">Total Duration:</p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-gray-600">Total Duration:</p>
                     <p className="font-bold text-pink-600">{formatDuration(totalDuration)}</p>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <p className="text-gray-600">Estimated Price:</p>
+                    <p className="font-bold text-pink-600">
+                      {totalPrice.min === totalPrice.max 
+                        ? `₦${totalPrice.min.toLocaleString()}` 
+                        : `₦${totalPrice.min.toLocaleString()} - ₦${totalPrice.max.toLocaleString()}`}
+                    </p>
                   </div>
                 </div>
               )}
@@ -751,8 +849,9 @@ export default function BookingPage() {
                   {totalDuration > 0 && (
                     <div className="mb-4 p-3 bg-blue-50 rounded-lg">
                       <p className="text-sm text-blue-700">
-                        <Clock className="w-4 h-4 inline mr-1" />
-                        Your appointment will take {formatDuration(totalDuration)}
+                        <p className="text-gray-700">
+                          Your appointment will take {formatDuration(totalDuration)}
+                        </p>
                       </p>
                     </div>
                   )}
@@ -959,20 +1058,26 @@ export default function BookingPage() {
                     <div className="space-y-4">
                       <div className="relative w-full h-48 mx-auto">
                         <Image
-                          src={referenceImage || "/placeholder.svg?height=200&width=300"}
+                          src={previewImage || referenceImage || "/placeholder.svg?height=200&width=300"}
                           alt="Reference"
                           fill
                           className="object-contain rounded"
                         />
                       </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={removeImage}
-                        className="text-red-500 border-red-500 hover:bg-red-50"
-                      >
-                        Remove Image
-                      </Button>
+                      <div className="space-y-2">
+                        {isUploading && (
+                          <div className="text-sm text-gray-500">Uploading image, please wait...</div>
+                        )}
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={removeImage}
+                          className="text-red-500 border-red-500 hover:bg-red-50"
+                          disabled={isUploading}
+                        >
+                          {isUploading ? 'Cancel Upload' : 'Remove Image'}
+                        </Button>
+                      </div>
                     </div>
                   ) : (
                     <>
@@ -1094,6 +1199,13 @@ export default function BookingPage() {
 
                   <p className="text-gray-600">Total Duration:</p>
                   <p className="font-medium">{formatDuration(totalDuration)}</p>
+
+                  <p className="text-gray-600">Total Price:</p>
+                  <p className="font-medium">
+                    {totalPrice.min === totalPrice.max 
+                      ? `₦${totalPrice.min.toLocaleString()}` 
+                      : `₦${totalPrice.min.toLocaleString()} - ₦${totalPrice.max.toLocaleString()}`}
+                  </p>
 
                   <p className="text-gray-600">Location:</p>
                   <p>{selectedLocation}</p>

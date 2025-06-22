@@ -20,6 +20,8 @@ export interface Appointment {
     email: string;
     phone: string;
   };
+  price: string;
+  duration: string;
   status: 'confirmed' | 'cancelled';
   createdAt: string;
   updatedAt: string;

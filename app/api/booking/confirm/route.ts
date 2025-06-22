@@ -6,7 +6,6 @@ import { sendWhatsAppNotification } from '../../services/whatsapp';
 import { sendOwnerAppointmentNotification } from '../../services/owner-email';
 import { getAppointmentCollection } from '@/app/lib/mongodb';
 import { clearTimeSlotCache } from '../../services/appointment';
-// import { convertAppointmentToGoogleEvent, createCalendarEvent } from '../../services/google-calendar';
 
 export async function POST(req: NextRequest) {
   try {
@@ -41,6 +40,26 @@ export async function POST(req: NextRequest) {
 
     const formattedDate = `${String(appointmentDate.getMonth() + 1).padStart(2, '0')}/${String(appointmentDate.getDate()).padStart(2, '0')}/${appointmentDate.getFullYear()}`;
 
+    // Parse total price from the request if available
+    let totalPrice = { min: 0, max: 0 };
+    if (appointmentData.totalPrice) {
+      try {
+        // Handle both stringified and direct object formats
+        const priceData = typeof appointmentData.totalPrice === 'string' 
+          ? JSON.parse(appointmentData.totalPrice)
+          : appointmentData.totalPrice;
+        
+        if (priceData && (priceData.min !== undefined || priceData.max !== undefined)) {
+          totalPrice = {
+            min: Number(priceData.min) || 0,
+            max: Number(priceData.max) || 0
+          };
+        }
+      } catch (error) {
+        console.error('Error parsing total price:', error);
+      }
+    }
+
     // Format the appointment data for storage and notifications
     const appointment = {
       ...appointmentData,
@@ -55,17 +74,21 @@ export async function POST(req: NextRequest) {
         ...service
       })) : [],
       totalDuration: appointmentData.totalDuration || "",
+      totalPrice, // Include the parsed total price
       date: formattedDate, // Primary date format (MM/DD/YYYY)
       dateFormats: dateFormats, // Store all formats to ensure we can find it later
       status: "confirmed",
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       environment: process.env.NODE_ENV || "unknown",
+      // Include reference image if provided
+      referenceImage: appointmentData.referenceImage || null,
       // Add raw date for debugging
       rawDate: appointmentData.date,
       rawTime: appointmentData.time,
       rawServices: appointmentData.services,
-      rawTotalDuration: appointmentData.totalDuration
+      rawTotalDuration: appointmentData.totalDuration,
+      rawTotalPrice: appointmentData.totalPrice // Keep original for debugging
     };
 
     console.log('Saving appointment to database:', JSON.stringify({
@@ -98,27 +121,7 @@ export async function POST(req: NextRequest) {
 
     // Send all notifications in parallel
     try {
-      // // Convert appointment to Google Calendar event
-      // const googleEvent = convertAppointmentToGoogleEvent(appointment);
-      
-      // // Google Calendar configuration from environment variables
-      // const googleConfig = {
-      //   clientEmail: process.env.GOOGLE_CALENDAR_CLIENT_EMAIL || '',
-      //   privateKey: process.env.GOOGLE_CALENDAR_PRIVATE_KEY?.replace(/\\n/g, '\n') || '',
-      //   calendarId: process.env.GOOGLE_CALENDAR_ID || ''
-      // };
-
-      // Send all notifications in parallel
       await Promise.all([
-        // Add to Google Calendar
-        // createCalendarEvent(googleEvent, googleConfig).then(event => {
-        //   console.log('Google Calendar event created:', event.htmlLink || 'Success');
-        //   return event;
-        // }).catch(error => {
-        //   console.error('Failed to create Google Calendar event:', error.message);
-        //   throw error;
-        // }),
-        
         // Send confirmation email to client
         sendAppointmentConfirmation(appointment).catch(error => 
           console.error("Failed to send confirmation email:", error)

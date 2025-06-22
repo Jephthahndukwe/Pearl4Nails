@@ -1,12 +1,49 @@
-import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 
-// Initialize Resend
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Initialize Nodemailer transporter
+const createTransporter = () => {
+  return nodemailer.createTransport({
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: parseInt(process.env.SMTP_PORT || '587'),
+    secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
+    auth: {
+      user: process.env.EMAIL_FROM,
+      pass: process.env.EMAIL_PASSWORD,
+    },
+    tls: {
+      rejectUnauthorized: false
+    }
+  });
+};
+
+// Helper function to send email with Nodemailer
+const sendEmailWithNodemailer = async (emailData: {
+  from: string;
+  to: string | string[];
+  subject: string;
+  html: string;
+  text?: string;
+  replyTo?: string;
+  bcc?: string | string[];
+  cc?: string | string[];
+  headers?: Record<string, string>;
+}): Promise<any> => {
+  const transporter = createTransporter();
+
+  try {
+    const info = await transporter.sendMail(emailData);
+    console.log('Email sent successfully:', info.messageId);
+    return info;
+  } catch (error) {
+    console.error('Nodemailer error:', error);
+    throw error;
+  }
+};
 
 // Get logo URL
-const getLogoUrl = (): string => {
-  return process.env.NEXT_PUBLIC_APP_URL + "/images/Pearl4Nails_logo.png";
-};
+const getLogoUrl = () => {
+  return process.env.NEXT_PUBLIC_APP_URL + "/images/Pearl4Nails_logo.png"
+}
 
 // Helper function to send email with retry logic
 const sendEmailWithRetry = async (
@@ -34,43 +71,56 @@ const sendEmailWithRetry = async (
         mailOptions.to === process.env.EMAIL_FROM;
       
       const toEmail = (process.env.NODE_ENV !== 'production' && isOwnerNotification)
-        ? (process.env.TEST_EMAIL || 'onboarding@resend.dev')
+        ? (process.env.TEST_EMAIL || 'test@example.com')
         : mailOptions.to;
         
       console.log(`Sending email to:`, toEmail, isOwnerNotification ? '(owner notification)' : '(client email)');
       
-      const { data, error } = await resend.emails.send({
-        from: process.env.EMAIL_FROM || 'Pearl4Nails <noreply@pearl4nails.com>',
+      // Generate plain text version from HTML
+      const generateTextFromHtml = (html: string): string => {
+        return html
+          .replace(/<[^>]*>/g, '') // Remove HTML tags
+          .replace(/&nbsp;/g, ' ')
+          .replace(/&amp;/g, '&')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&quot;/g, '"')
+          .replace(/&#39;/g, "'")
+          .replace(/\s+/g, ' ')
+          .trim();
+      };
+
+      // Prepare email data for Nodemailer
+      const emailData = {
+        from: process.env.EMAIL_FROM,
         to: toEmail,
         subject: mailOptions.subject,
         html: mailOptions.html,
-        replyTo: mailOptions.replyTo,
-        bcc: process.env.NODE_ENV === 'production' ? mailOptions.bcc : undefined,
-        cc: process.env.NODE_ENV === 'production' ? mailOptions.cc : undefined,
-        headers: {
-          'X-Auto-Response-Suppress': 'OOF, AutoReply',
-          'Precedence': 'bulk',
-          ...(mailOptions.headers || {})
-        }
-      });
+        text: generateTextFromHtml(mailOptions.html),
+        ...(mailOptions.replyTo && { replyTo: mailOptions.replyTo }),
+        ...(process.env.NODE_ENV === 'production' && mailOptions.bcc && { bcc: mailOptions.bcc }),
+        ...(process.env.NODE_ENV === 'production' && mailOptions.cc && { cc: mailOptions.cc }),
+        ...(mailOptions.headers && { headers: mailOptions.headers })
+      };
       
-      if (error) {
-        throw error;
-      }
+      const result = await sendEmailWithNodemailer(emailData);
       
-      console.log(`✅ Email sent successfully (Attempt ${attempt}):`, data?.id);
+      console.log(`✅ Email sent successfully (Attempt ${attempt}):`, result.messageId);
       return true;
       
     } catch (error: any) {
       lastError = error;
       console.error(`❌ Attempt ${attempt} failed to send email:`, {
         error: error.message,
-        code: error.name,
-        statusCode: error.statusCode,
+        code: error.code,
+        response: error.response,
       });
       
-      // If this is a permanent failure, don't retry
-      if (error.statusCode && error.statusCode >= 400 && error.statusCode < 500) {
+      // Check for permanent failures (authentication, invalid email, etc.)
+      if (error.code === 'EAUTH' || 
+          error.code === 'EENVELOPE' || 
+          error.responseCode === 550 ||
+          error.responseCode === 553) {
         console.error('Permanent failure, not retrying');
         break;
       }
@@ -93,8 +143,7 @@ const sendEmailWithRetry = async (
     to: mailOptions.to,
     subject: mailOptions.subject,
     error: lastError?.message,
-    code: lastError?.name,
-    statusCode: lastError?.statusCode,
+    code: lastError?.code,
   });
   
   throw lastError || new Error('Failed to send email after multiple attempts');
@@ -127,6 +176,19 @@ const generateServicesHtml = (appointment: any): string => {
       servicesHtml += `
         <div class="details-item">
           <strong>Total Duration:</strong> ${appointment.totalDuration}
+        </div>`;
+    }
+    
+    // Add total price if available
+    if (appointment.totalPrice) {
+      const { min, max } = appointment.totalPrice;
+      const priceText = min === max 
+        ? `₦${min.toLocaleString()}` 
+        : `₦${min.toLocaleString()} - ₦${max.toLocaleString()}`;
+        
+      servicesHtml += `
+        <div class="details-item">
+          <strong>Total Price:</strong> ${priceText}
         </div>`;
     }
   } else {
@@ -224,12 +286,23 @@ export const sendAppointmentConfirmation = async (appointment: any): Promise<boo
               <div class="details-item">
                 <strong>Location:</strong> ${appointment.location}
               </div>
+              ${appointment.referenceImage ? `
+              <div class="details-item" style="text-align: center; margin-top: 20px;">
+                <h4 style="color: #ff69b4; margin-bottom: 10px;">Your Reference Image</h4>
+                <img src="${process.env.NEXT_PUBLIC_APP_URL}${appointment.referenceImage}" alt="Reference Image" style="max-width: 100%; border-radius: 8px; border: 2px solid #ffd1e0;" />
+                <p style="font-size: 12px; color: #999; margin-top: 5px;">
+                  If the image doesn't display, you can view it <a href="${process.env.NEXT_PUBLIC_APP_URL}${appointment.referenceImage}" target="_blank" style="color: #ff69b4; text-decoration: underline;">here</a>.
+                </p>
+              </div>
+              ` : ''}
             </div>
 
             <p>If you need to reschedule or cancel your appointment, please contact us at our email or phone.</p>
             <p>We look forward to seeing you!</p>
             
             <p>Best regards,<br>The Pearl4Nails Team</p>
+
+            <p style="color: #ff69b4;">This is an automated notification.</p>
           </div>
         </div>
       </body>

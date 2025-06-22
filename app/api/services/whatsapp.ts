@@ -68,6 +68,7 @@ export const sendWhatsAppNotification = async (bookingDetails: any) => {
     let servicesInfo = ""
     let priceDisplay = ""
     let durationDisplay = ""
+    let totalPriceDisplay = ""
 
     if (bookingDetails.services && bookingDetails.services.length > 0) {
       // Multiple services
@@ -86,6 +87,14 @@ export const sendWhatsAppNotification = async (bookingDetails: any) => {
 
       // Add total duration if available
       durationDisplay = bookingDetails.totalDuration ? `\nTotal Duration: ${bookingDetails.totalDuration}` : ""
+      
+      // Add total price if available
+      if (bookingDetails.totalPrice) {
+        const { min, max } = bookingDetails.totalPrice
+        totalPriceDisplay = min === max 
+          ? `\nTotal Price: ₦${min.toLocaleString()}` 
+          : `\nTotal Price: ₦${min.toLocaleString()} - ₦${max.toLocaleString()}`
+      }
     } else {
       // Single service (legacy format)
       const serviceDisplay =
@@ -99,7 +108,18 @@ export const sendWhatsAppNotification = async (bookingDetails: any) => {
       bookingDetails.status === "cancelled"
         ? `Appointment Cancelled!
 \n\nServices:\n${servicesInfo}${priceDisplay}${durationDisplay}\nDate: ${bookingDetails.date}\nTime: ${bookingDetails.time}\nCustomer: ${customerName}\nPhone: ${customerPhone}\nEmail: ${customerEmail}\nLocation: ${bookingDetails.location}${optionalFields}`
-        : `New Appointment Booked!\n\nServices:\n${servicesInfo}${priceDisplay}${durationDisplay}\nDate: ${bookingDetails.date}\nTime: ${bookingDetails.time}\nCustomer: ${customerName}\nPhone: ${customerPhone}\nEmail: ${customerEmail}\nLocation: ${bookingDetails.location}${optionalFields}`
+        : `New Appointment Booking!\n\n` +
+        `Name: ${customerName}` +
+        `\nEmail: ${customerEmail || 'Not provided'}` +
+        `\nPhone: ${customerPhone || 'Not provided'}` +
+        `\n\nServices:\n${servicesInfo}` +
+        priceDisplay +
+        durationDisplay +
+        totalPriceDisplay +
+        `\n\nDate: ${bookingDetails.date}` +
+        `\nTime: ${bookingDetails.time}` +
+        `\nLocation: ${bookingDetails.location || 'Not specified'}` +
+        `\n\nAdditional Details:${optionalFields}`
 
     // First try: CallMeBot API
     try {

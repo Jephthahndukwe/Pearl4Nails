@@ -1,7 +1,61 @@
-import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 
-// Initialize Resend
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Create reusable transporter object using SMTP transport
+const createTransporter = () => {
+  return nodemailer.createTransport({
+    host: process.env.SMTP_HOST, // e.g., 'smtp.gmail.com', 'smtp.outlook.com'
+    port: parseInt(process.env.SMTP_PORT || '587'), // 587 for TLS, 465 for SSL
+    secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
+    auth: {
+      user: process.env.EMAIL_FROM, // your email address
+      pass: process.env.EMAIL_PASSWORD, // your email password or app-specific password
+    },
+    // Optional: for self-signed certificates
+    tls: {
+      rejectUnauthorized: false
+    }
+  });
+};
+
+// Helper function to send email with Nodemailer
+const sendEmailWithNodemailer = async (emailData: {
+  from: { email: string; name?: string };
+  to: Array<{ email: string; name?: string }>;
+  subject: string;
+  html: string;
+  text?: string;
+  replyTo?: { email: string; name?: string };
+  bcc?: Array<{ email: string; name?: string }>;
+  cc?: Array<{ email: string; name?: string }>;
+}): Promise<any> => {
+  try {
+    const transporter = createTransporter();
+
+    // Format addresses for Nodemailer
+    const formatAddress = (addr: { email: string; name?: string }) => 
+      addr.name ? `"${addr.name}" <${addr.email}>` : addr.email;
+
+    const formatAddresses = (addresses: Array<{ email: string; name?: string }>) =>
+      addresses.map(formatAddress).join(', ');
+
+    const mailOptions = {
+      from: formatAddress(emailData.from),
+      to: formatAddresses(emailData.to),
+      subject: emailData.subject,
+      html: emailData.html,
+      text: emailData.text,
+      ...(emailData.replyTo && { replyTo: formatAddress(emailData.replyTo) }),
+      ...(emailData.cc && { cc: formatAddresses(emailData.cc) }),
+      ...(emailData.bcc && { bcc: formatAddresses(emailData.bcc) }),
+    };
+
+    const result = await transporter.sendMail(mailOptions);
+    return result;
+  } catch (error) {
+    console.error('Nodemailer Error:', error);
+    throw new Error(`Email sending failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+};
 
 const getLogoUrl = () => {
   return process.env.NEXT_PUBLIC_APP_URL + "/images/Pearl4Nails_logo.png"
@@ -43,6 +97,20 @@ const emailStyles = `
   </style>
 `;
 
+// Helper function to generate plain text from HTML
+const generateTextFromHtml = (html: string): string => {
+  return html
+    .replace(/<[^>]*>/g, '') // Remove HTML tags
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, ' ')
+    .trim();
+};
+
 export const sendOwnerAppointmentNotification = async (appointment: any) => {
   try {
     // Generate services list HTML
@@ -71,6 +139,19 @@ export const sendOwnerAppointmentNotification = async (appointment: any) => {
         servicesHtml += `
         <div class="details-item">
           <strong>Total Duration:</strong> ${appointment.totalDuration}
+        </div>`;
+      }
+      
+      // Add total price if available
+      if (appointment.totalPrice) {
+        const { min, max } = appointment.totalPrice;
+        const priceText = min === max 
+          ? `₦${min.toLocaleString()}` 
+          : `₦${min.toLocaleString()} - ₦${max.toLocaleString()}`;
+          
+        servicesHtml += `
+        <div class="details-item">
+          <strong>Total Price:</strong> ${priceText}
         </div>`;
       }
     } else {
@@ -152,26 +233,44 @@ export const sendOwnerAppointmentNotification = async (appointment: any) => {
             <div class="details-item">
               <strong>Notes:</strong> ${appointment.notes}
             </div>` : ''}
+            ${appointment.referenceImage ? `
+            <div class="details-item" style="text-align: center; margin-top: 20px;">
+              <h4 style="color: #ff69b4; margin-bottom: 10px;">Client's Reference Image</h4>
+              <img src="${process.env.NEXT_PUBLIC_APP_URL}${appointment.referenceImage}" alt="Reference Image" style="max-width: 100%; border-radius: 8px; border: 2px solid #ffd1e0;" />
+              <p style="font-size: 12px; color: #999; margin-top: 5px;">
+                If the image doesn't display, you can view it <a href="${process.env.NEXT_PUBLIC_APP_URL}${appointment.referenceImage}" target="_blank" style="color: #ff69b4; text-decoration: underline;">here</a>.
+              </p>
+            </div>
+            ` : ''}
           </div>
-
-          <p>This is an automated notification.</p>
           
           <p>Best regards,<br>Pearl4Nails System</p>
+          
+          <p>This is an automated notification.</p>
         </div>
       </div>
     </body>
     </html>
     `
 
-    // Send email using Resend
-    await resend.emails.send({
-      from: process.env.EMAIL_FROM || 'Pearl4Nails <noreply@pearl4nails.com>',
-      to: process.env.NODE_ENV === 'production' 
-        ? (process.env.EMAIL_FROM || 'noreply@pearl4nails.com')
-        : (process.env.TEST_EMAIL || 'onboarding@resend.dev'),
+    // Prepare email data for Nodemailer
+    const emailData = {
+      from: {
+        email: process.env.EMAIL_FROM,
+        name: 'Pearl4Nails'
+      },
+      to: [{
+        email: process.env.NODE_ENV === 'production' 
+          ? (process.env.OWNER_EMAIL || process.env.EMAIL_FROM)
+          : (process.env.TEST_EMAIL || 'test@example.com')
+      }],
       subject: `New Appointment Booked By: ${appointment.name} - ${formattedDate} at ${appointment.time}`,
       html: emailHtml,
-    })
+      text: generateTextFromHtml(emailHtml),
+    };
+
+    // Send email using Nodemailer
+    await sendEmailWithNodemailer(emailData);
 
     return true
   } catch (error) {
@@ -291,15 +390,24 @@ export const sendOwnerCancellationNotification = async (appointment: any) => {
     </html>
     `
 
-    // Send cancellation email using Resend
-    await resend.emails.send({
-      from: process.env.EMAIL_FROM || 'Pearl4Nails <noreply@pearl4nails.com>',
-      to: process.env.NODE_ENV === 'production'
-        ? (process.env.EMAIL_FROM || 'noreply@pearl4nails.com')
-        : (process.env.TEST_EMAIL || 'onboarding@resend.dev'),
+    // Prepare email data for Nodemailer
+    const emailData = {
+      from: {
+        email: process.env.EMAIL_FROM,
+        name: 'Pearl4Nails'
+      },
+      to: [{
+        email: process.env.NODE_ENV === 'production'
+          ? (process.env.OWNER_EMAIL || process.env.EMAIL_FROM)
+          : (process.env.TEST_EMAIL || 'test@example.com')
+      }],
       subject: `Appointment Cancelled: ${appointment.name} - ${formattedDate} at ${appointment.time}`,
       html: emailHtml,
-    })
+      text: generateTextFromHtml(emailHtml),
+    };
+
+    // Send cancellation email using Nodemailer
+    await sendEmailWithNodemailer(emailData);
 
     return true
   } catch (error) {
@@ -392,15 +500,24 @@ export const sendOwnerTrainingNotification = async (registration: any) => {
     </html>
     `
 
-    // Send training notification email using Resend
-    await resend.emails.send({
-      from: process.env.EMAIL_FROM || 'Pearl4Nails <noreply@pearl4nails.com>',
-      to: process.env.NODE_ENV === 'production'
-        ? (process.env.EMAIL_FROM || 'noreply@pearl4nails.com')
-        : (process.env.TEST_EMAIL || 'onboarding@resend.dev'),
+    // Prepare email data for Nodemailer
+    const emailData = {
+      from: {
+        email: process.env.EMAIL_FROM,
+        name: 'Pearl4Nails'
+      },
+      to: [{
+        email: process.env.NODE_ENV === 'production'
+          ? (process.env.OWNER_EMAIL || process.env.EMAIL_FROM)
+          : (process.env.TEST_EMAIL || 'test@example.com')
+      }],
       subject: `New Training Registration From: ${registration.fullName} - ${registration.course || 'Training'}`,
       html: emailHtml,
-    })
+      text: generateTextFromHtml(emailHtml),
+    };
+
+    // Send training notification email using Nodemailer
+    await sendEmailWithNodemailer(emailData);
 
     return true
   } catch (error) {

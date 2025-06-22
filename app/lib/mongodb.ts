@@ -1,321 +1,372 @@
-import { MongoClient, ObjectId, ReadPreference } from 'mongodb';
+import { MongoClient, Db, Collection, type MongoClientOptions, type AuthMechanism } from 'mongodb';
 
 // Global connection variables
 let client: MongoClient | null = null;
-let db: any = null;
+let db: Db | null = null;
 let isConnecting = false;
 
-// Connection configuration
+// Optimized connection configuration for serverless environments
 const CONNECTION_CONFIG = {
-  // Connection attempts
-  maxRetries: 3,
-  baseRetryDelay: 1000,
-  maxRetryDelay: 5000,
-  
-  // Timeout settings
-  connectTimeoutMS: 10000,     // 10 seconds
-  socketTimeoutMS: 30000,      // 30 seconds
-  serverSelectionTimeoutMS: 10000, // 10 seconds
-  
   // Connection pool settings
   maxPoolSize: 5,
   minPoolSize: 1,
-  maxIdleTimeMS: 10000,
-  waitQueueTimeoutMS: 10000,
-  
-  // Heartbeat and monitoring
+
+  // Timeout settings
+  serverSelectionTimeoutMS: 20000,
+  socketTimeoutMS: 30000,
+  connectTimeoutMS: 20000,
   heartbeatFrequencyMS: 10000,
-  
-  // Retry settings
+
+  // Connection management
+  maxIdleTimeMS: 60000,
+  waitQueueTimeoutMS: 10000,
+
+  // Network and retry settings
   retryWrites: true,
   retryReads: true,
-  
-  // Network settings
-  family: 4,  // Force IPv4
-  
-  // Keep alive settings
-  keepAlive: true,
-  keepAliveInitialDelay: 30000,  // 30 seconds
-  
-  // TLS/SSL settings
-  tls: true,
-  tlsAllowInvalidCertificates: false,
-  tlsAllowInvalidHostnames: false,
-  
-  // Replica set and authentication
-  replicaSet: 'atlas-14pz4k-shard-0',
-  authSource: 'admin',
-  authMechanism: 'SCRAM-SHA-1',
-  
-  // Read preference
-  readPreference: 'primary',
-  
-  // Write concern
-  w: 'majority',
-  wtimeout: 10000
+
+  // Compression
+  compressors: ['zlib' as const],
+
+  // Monitoring and debugging
+  monitorCommands: process.env.NODE_ENV === 'development',
+
+  // Authentication
+  authMechanism: 'DEFAULT' as AuthMechanism,
+  authSource: 'admin'
 };
 
-// Helper function to sleep with exponential backoff
-const sleep = (attempt: number) => {
-  const delay = Math.min(
-    CONNECTION_CONFIG.baseRetryDelay * Math.pow(2, attempt),
-    CONNECTION_CONFIG.maxRetryDelay
-  );
-  console.log(`Waiting ${delay}ms before retry...`);
-  return new Promise(resolve => setTimeout(resolve, delay));
-};
+// Health check function with faster timeout
+const isConnectionHealthy = async (): Promise<boolean> => {
+  if (!client || !db) return false;
 
-// Function to validate MongoDB URI format
-const isValidMongoURI = (uri: string): boolean => {
   try {
-    const url = new URL(uri);
-    return url.protocol === 'mongodb:' || url.protocol === 'mongodb+srv:';
-  } catch (e) {
+    // Quick ping with 2 second timeout
+    await client.db('admin').command(
+      { ping: 1 },
+      {
+        timeoutMS: 2000,
+        readPreference: 'primaryPreferred'
+      }
+    );
+    return true;
+  } catch (error) {
+    console.log('⚠️ Connection health check failed:', error instanceof Error ? error.message : 'Unknown error');
     return false;
   }
 };
 
-// Close existing connection
-const closeConnection = async () => {
-  if (client) {
-    try {
-      await client.close();
-      console.log('MongoDB connection closed');
-    } catch (error) {
-      console.error('Error closing MongoDB connection:', error);
-    } finally {
-      client = null;
-      db = null;
-      isConnecting = false;
-    }
+// Setup MongoDB connection event listeners
+const setupConnectionEventListeners = () => {
+  if (!client) return;
+
+  // Connection monitoring
+  client.on('serverHeartbeatFailed', (event) => {
+    // console.warn('💓 MongoDB heartbeat failed:', event.failure?.message || 'Unknown error');
+  });
+
+  client.on('serverHeartbeatSucceeded', () => {
+    // console.debug('💓 MongoDB heartbeat succeeded');
+  });
+
+  client.on('connectionPoolCreated', () => {
+    // console.log('🔄 MongoDB connection pool created');
+  });
+
+  client.on('connectionPoolClosed', () => {
+    // console.log('🔌 MongoDB connection pool closed');
+  });
+
+  client.on('connectionPoolReady', () => {
+    // console.log('✅ MongoDB connection pool ready');
+  });
+
+  client.on('connectionPoolCleared', (event) => {
+    // console.warn('⚠️ MongoDB connection pool cleared');
+  });
+
+  client.on('close', () => {
+    // console.log('🔌 MongoDB connection closed');
+    client = null;
+    db = null;
+  });
+};
+
+// Force close unhealthy connections
+const forceCloseConnection = async (): Promise<void> => {
+  if (!client) {
+    db = null;
+    isConnecting = false;
+    return;
+  }
+
+  const clientToClose = client;
+  client = null;
+  db = null;
+  isConnecting = false;
+
+  try {
+    console.log('🛑 Force closing MongoDB connection...');
+    await clientToClose.close(true); // Force close
+    // console.log('✅ MongoDB connection closed successfully');
+  } catch (error) {
+    console.error('❌ Error force closing MongoDB connection:', error instanceof Error ? error.message : 'Unknown error');
+    throw error; // Re-throw to allow callers to handle the error
   }
 };
 
-export const connectToDatabase = async (): Promise<{db: any; client: MongoClient}> => {
-  // If we already have a healthy connection, return it
-  if (client && db) {
-    try {
-      // Quick ping to verify connection is still alive
-      await client.db('admin').command({ ping: 1 }, { maxTimeMS: 2000 });
-      console.log('Using existing MongoDB connection');
-      return { db, client };
-    } catch (error) {
-      console.warn('Existing connection is stale, reconnecting...', error);
-      await closeConnection();
-    }
-  }
-  
+// Connect to database with connection pooling and retry logic
+export const connectToDatabase = async (): Promise<Db> => {
   // Prevent multiple simultaneous connection attempts
   if (isConnecting) {
-    console.log('Connection attempt already in progress, waiting...');
-    // Wait for the ongoing connection attempt
+    console.log('🔁 Connection attempt already in progress, waiting...');
+    // Wait for existing connection attempt to complete
     let attempts = 0;
-    const MAX_WAIT_ATTEMPTS = 30; // 3 seconds total wait (30 * 100ms)
-    while (isConnecting && attempts < MAX_WAIT_ATTEMPTS) {
-      await new Promise(resolve => setTimeout(resolve, 100));
+    const maxWaitTime = 5000; // Max 5 seconds to wait for existing connection
+    const checkInterval = 100; // Check every 100ms
+
+    while (isConnecting && attempts * checkInterval < maxWaitTime) {
+      await new Promise(resolve => setTimeout(resolve, checkInterval));
       attempts++;
-      
-      // If connection was established by another process
-      if (client && db) {
-        console.log(`Reusing connection after waiting ${attempts * 100}ms`);
-        return { db, client };
-      }
-    }
-    
-    if (client && db) {
-      return { db, client };
-    }
-    
-    console.warn('Timed out waiting for existing connection attempt');
-  }
-  
-  isConnecting = true;
-  
-  try {
-    const uri = process.env.MONGODB_URI?.trim() || '';
-    
-    if (!uri) {
-      throw new Error('MONGODB_URI environment variable is not defined');
-    }
-    
-    if (!isValidMongoURI(uri)) {
-      throw new Error('Invalid MongoDB URI format');
     }
 
-    // Log connection attempt (without credentials)
-    const safeUri = uri.replace(/(mongodb(?:\+srv)?:\/\/)([^:]+):([^@]+)@/, '$1***:***@');
-    console.log(`Connecting to MongoDB: ${safeUri}`);
-    
-    // Minimal connection options for maximum compatibility
-    const options = {
-      // Basic connection settings
-      connectTimeoutMS: 10000, // 10 seconds to establish connection
-      socketTimeoutMS: 30000,  // 30 seconds for socket operations
-      
-      // Connection pool settings
-      maxPoolSize: 5,          // Maximum number of connections in the pool
-      
-      // Read preferences
-      readPreference: 'primary' as const, // Use 'primary' for better compatibility
-      
-      // Application name for monitoring
-      appName: 'Pearl4Nails-WebApp',
-      
-      // TLS/SSL options - keep it simple
-      tls: true,
-      
-      // Network settings - use IPv4
-      family: 4,
-      
-      // Authentication
-      authSource: 'admin'
-    };
-    
-    console.log(`Connection attempt started at ${new Date().toISOString()}`);
-    
-    // Create new client and connect
-    const newClient = new MongoClient(uri, options);
-    
-    try {
-      console.log('Connecting to MongoDB...');
-      
-      // Simple connection with timeout
-      await Promise.race([
-        newClient.connect(),
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Connection timeout')), 10000)
-        )
-      ]);
-      
-      // Get the database
-      const newDb = newClient.db('pearl4nails');
-      
-      // Verify connection with a simple query
-      await newDb.command({ ping: 1 });
-      console.log('✅ Successfully connected to MongoDB');
-      
-      // Update global connection variables
-      client = newClient;
-      db = newDb;
-      
-      return { db, client };
-      
-    } catch (error) {
-      console.error('Failed to connect to MongoDB:', error);
-      
-      // Close client if connection failed
-      try {
-        await newClient.close();
-      } catch (closeError) {
-        console.warn('Error closing failed connection:', closeError);
-      }
-      
-      throw new Error(`Failed to connect to MongoDB: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    if (isConnecting) {
+      console.warn('⚠️ Previous connection attempt taking too long, starting new connection');
     }
+  }
+
+  // Check if existing connection is healthy
+  if (client && db) {
+    try {
+      if (await isConnectionHealthy()) {
+        console.log('♻️ Using existing healthy connection');
+        return db;
+      }
+    } catch (error) {
+      console.warn('⚠️ Existing connection health check failed, creating new connection');
+    }
+  }
+
+  // Clean up any existing connection
+  if (client || db) {
+    console.log('🧹 Cleaning up existing connection...');
+    await forceCloseConnection().catch(console.error);
+  }
+
+  const uri = process.env.MONGODB_URI;
+  if (!uri) {
+    const errorMsg = 'MONGODB_URI environment variable is not set';
+    console.error(`❌ ${errorMsg}`);
+    throw new Error(errorMsg);
+  }
+
+  isConnecting = true;
+  const connectionAttemptStart = Date.now();
+
+  try {
+    console.log('🔄 Attempting to connect to MongoDB...');
+
+    // Create new client with optimized config
+    client = new MongoClient(uri, CONNECTION_CONFIG);
+
+    // Set up event listeners for monitoring
+    setupConnectionEventListeners();
+
+    // Connect with timeout
+    const connectPromise = client.connect();
+    const customConnectTimeout = 20000; // Give it 20s
+
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(
+        () => reject(new Error(`Connection timed out after ${customConnectTimeout}ms`)),
+        customConnectTimeout
+      )
+    );
+    await Promise.race([
+      client.connect(),
+      timeoutPromise
+    ]);
+
+    // Verify the connection by pinging the database
+    db = client.db('pearl4nails');
+    await db.command(
+      { ping: 1 },
+      {
+        timeoutMS: 5000,  // 5 second timeout for the ping
+        readPreference: 'primaryPreferred'
+      }
+    );
+
+    const connectionTime = Date.now() - connectionAttemptStart;
+    console.log(`✅ Successfully connected to MongoDB in ${connectionTime}ms`);
+
+    return db;
+
   } catch (error) {
-    console.error('MongoDB connection error:', error);
-    throw error;
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error(`❌ MongoDB connection failed after ${Date.now() - connectionAttemptStart}ms:`, errorMessage);
+
+    // Clean up failed connection attempt
+    await forceCloseConnection().catch(console.error);
+
+    // Provide more detailed error information
+    if (errorMessage.includes('ENOTFOUND') || errorMessage.includes('ECONNREFUSED')) {
+      throw new Error('Could not connect to MongoDB server. Please check if the server is running and accessible.');
+    } else if (errorMessage.includes('Authentication failed')) {
+      throw new Error('MongoDB authentication failed. Please check your credentials.');
+    } else if (errorMessage.includes('timed out')) {
+      throw new Error('Connection to MongoDB server timed out. Please check your network connection and try again.');
+    } else {
+      throw new Error(`MongoDB connection failed: ${errorMessage}`);
+    }
   } finally {
     isConnecting = false;
   }
 };
 
-export const getAppointmentCollection = async () => {
-  try {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('appointments');
-    
-    // Create indexes if they don't exist (with shorter timeout)
-    try {
-      await Promise.race([
-        collection.createIndex({ date: 1, time: 1, status: 1 }, { unique: false }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Index creation timeout')), 5000))
-      ]);
-      
-      await Promise.race([
-        collection.createIndex({ status: 1 }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Index creation timeout')), 5000))
-      ]);
-    } catch (indexError) {
-      console.warn('Index creation failed or timed out:', indexError);
-      // Continue without indexes - they're not critical for basic functionality
-    }
+// Get appointments collection with aggressive retry and fast failure
+export const getAppointmentCollection = async (): Promise<Collection> => {
+  const maxRetries = 2;
+  const retryDelay = 500; // Reduced from 1000ms
 
-    return collection;
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const database = await connectToDatabase();
+      const collection = database.collection('appointments');
+
+      // Verify collection access with a quick operation
+      await collection.estimatedDocumentCount({ maxTimeMS: 1000 });
+
+      return collection;
+
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error(`❌ Collection access attempt ${attempt} failed:`, errorMessage);
+
+      if (attempt < maxRetries) {
+        console.log(`🔄 Retrying in ${retryDelay}ms...`);
+        await forceCloseConnection(); // Force clean connection state
+        await new Promise(resolve => setTimeout(resolve, retryDelay));
+      } else {
+        throw new Error(`Failed to get collection after ${maxRetries} attempts: ${errorMessage}`);
+      }
+    }
+  }
+
+  throw new Error('Unexpected error in getAppointmentCollection');
+};
+
+// Optimized query function with built-in timeout and fallback
+export const queryWithTimeout = async <T>(
+  collection: Collection,
+  operation: () => Promise<T>,
+  timeoutMs: number = 5000
+): Promise<T> => {
+  const timeoutPromise = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error(`Query timeout after ${timeoutMs}ms`)), timeoutMs)
+  );
+
+  try {
+    return await Promise.race([operation(), timeoutPromise]);
   } catch (error) {
-    console.error('Error getting appointment collection:', error);
+    // Clean up connection on query timeout
+    if (error instanceof Error && error.message.includes('timeout')) {
+      console.log('🧹 Cleaning up connection due to query timeout');
+      forceCloseConnection().catch(console.error);
+    }
     throw error;
   }
 };
 
-// Helper function to format date for queries
-export const formatDateForQuery = (date: string | Date): string => {
-  if (date instanceof Date) {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  } else if (typeof date === 'string') {
-    // If it's already in YYYY-MM-DD format, return it
-    if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      return date;
-    }
-    
-    // Handle MM/DD/YYYY format
-    const parts = date.split('/');
-    if (parts.length === 3) {
-      return `${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
-    }
-    
-    // Last resort - create date object
-    const dateObj = new Date(date);
-    const year = dateObj.getFullYear();
-    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-    const day = String(dateObj.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+// Create indexes (run this once, maybe in a setup script)
+export const createIndexes = async (): Promise<void> => {
+  try {
+    const collection = await getAppointmentCollection();
+
+    // Create indexes with shorter timeout
+    const indexOperations = [
+      collection.createIndex(
+        { date: 1, time: 1 },
+        { background: true, name: 'date_time_idx', maxTimeMS: 10000 }
+      ),
+      collection.createIndex(
+        { status: 1 },
+        { background: true, name: 'status_idx', maxTimeMS: 10000 }
+      ),
+      collection.createIndex(
+        { appointmentId: 1 },
+        { background: true, name: 'appointmentId_idx', maxTimeMS: 10000 }
+      )
+    ];
+
+    await Promise.all(indexOperations);
+    // console.log('✅ Indexes created successfully');
+
+  } catch (error) {
+    console.error('❌ Index creation failed:', error instanceof Error ? error.message : 'Unknown error');
+    // Don't throw - app can work without indexes
   }
-  
-  return new Date().toISOString().split('T')[0];
 };
 
-// Graceful shutdown
-process.on('SIGINT', async () => {
-  console.log('Received SIGINT, closing MongoDB connection...');
-  await closeConnection();
-  process.exit(0);
-});
+// Close connection gracefully
+export const closeConnection = async (): Promise<void> => {
+  await forceCloseConnection();
+  console.log('🔌 MongoDB connection closed gracefully');
+};
 
-process.on('SIGTERM', async () => {
-  console.log('Received SIGTERM, closing MongoDB connection...');
-  await closeConnection();
-  process.exit(0);
-});
-
-// Add this function after the existing functions
-export const testConnection = async (): Promise<{ success: boolean; message: string; latency?: number }> => {
-  const startTime = Date.now();
-  
+// Test connection with timeout
+export const testConnection = async (): Promise<boolean> => {
   try {
-    const { client } = await connectToDatabase();
-    const endTime = Date.now();
-    const latency = endTime - startTime;
-    
-    // Test a simple operation
-    await client.db('pearl4nails').collection('test').findOne({});
-    
-    return {
-      success: true,
-      message: `Connection successful`,
-      latency
-    };
+    const database = await connectToDatabase();
+    await database.command({ ping: 1 }, { timeoutMS: 3000 });
+    console.log('✅ MongoDB connection test passed');
+    return true;
   } catch (error) {
-    const endTime = Date.now();
-    const latency = endTime - startTime;
-    
-    return {
-      success: false,
-      message: error instanceof Error ? error.message : String(error),
-      latency
-    };
+    console.error('❌ MongoDB connection test failed:', error instanceof Error ? error.message : 'Unknown error');
+    return false;
   }
+};
+
+// Graceful shutdown handlers
+const gracefulShutdown = async (signal: string): Promise<void> => {
+  console.log(`📴 Shutting down MongoDB connection due to ${signal}...`);
+  await closeConnection();
+  process.exit(0);
+};
+
+// Only set up handlers once
+if (!process.env.MONGODB_HANDLERS_SET) {
+  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+  process.on('uncaughtException', (error) => {
+    console.error('💥 Uncaught exception:', error);
+    gracefulShutdown('uncaughtException');
+  });
+  process.env.MONGODB_HANDLERS_SET = 'true';
+}
+
+// Helper function to format dates
+export const formatDateForQuery = (date: string | Date): string => {
+  if (date instanceof Date) {
+    return date.toISOString().split('T')[0];
+  }
+
+  // If already in YYYY-MM-DD format, return as is
+  if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return date;
+  }
+
+  // Convert other formats to YYYY-MM-DD
+  return new Date(date).toISOString().split('T')[0];
+};
+
+// Health monitoring function for debugging
+export const getConnectionStatus = (): object => {
+  return {
+    hasClient: !!client,
+    hasDb: !!db,
+    isConnecting,
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'unknown'
+  };
 };

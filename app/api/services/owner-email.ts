@@ -32,7 +32,7 @@ const sendEmailWithNodemailer = async (emailData: {
     const transporter = createTransporter();
 
     // Format addresses for Nodemailer
-    const formatAddress = (addr: { email: string; name?: string }) =>
+    const formatAddress = (addr: { email: string; name?: string }) => 
       addr.name ? `"${addr.name}" <${addr.email}>` : addr.email;
 
     const formatAddresses = (addresses: Array<{ email: string; name?: string }>) =>
@@ -141,28 +141,18 @@ export const sendOwnerAppointmentNotification = async (appointment: any) => {
           <strong>Total Duration:</strong> ${appointment.totalDuration}
         </div>`;
       }
-
+      
       // Add total price if available
       if (appointment.totalPrice) {
         const { min, max } = appointment.totalPrice;
-        const priceText = min === max
-          ? `₦${min.toLocaleString()}`
+        const priceText = min === max 
+          ? `₦${min.toLocaleString()}` 
           : `₦${min.toLocaleString()} - ₦${max.toLocaleString()}`;
-
+          
         servicesHtml += `
         <div class="details-item">
           <strong>Total Price:</strong> ${priceText}
         </div>`;
-      }
-      if (appointment.referenceImage) {
-      servicesHtml += `
-      <div class="details-item" style="text-align: center; margin-top: 20px;">
-        <h4 style="color: #ff69b4; margin-bottom: 10px;">Client's Reference Image</h4>
-        <img src="${appointment.referenceImage}" alt="Reference Image" style="max-width: 100%; border-radius: 8px; border: 2px solid #ffd1e0;" />
-        <p style="font-size: 12px; color: #999; margin-top: 5px;">
-          If the image doesn't display, you can view it <a href="${appointment.referenceImage}" target="_blank" style="color: #ff69b4; text-decoration: underline;">here</a>.
-        </p>
-      </div>`;
       }
     } else {
       // Single service (legacy format)
@@ -178,14 +168,7 @@ export const sendOwnerAppointmentNotification = async (appointment: any) => {
       <div class="details-item">
         <strong>Duration:</strong> ${appointment.serviceDuration}
       </div>` : ""}
-      ${appointment.referenceImage ? `
-      <div class="details-item" style="text-align: center; margin-top: 20px;">
-        <h4 style="color: #ff69b4; margin-bottom: 10px;">Client's Reference Image</h4>
-        <img src="${appointment.referenceImage}" alt="Reference Image" style="max-width: 100%; border-radius: 8px; border: 2px solid #ffd1e0;" />
-        <p style="font-size: 12px; color: #999; margin-top: 5px;">
-          If the image doesn't display, you can view it <a href="${appointment.referenceImage}" target="_blank" style="color: #ff69b4; text-decoration: underline;">here</a>.
-        </p>
-      </div>` : ""}`;
+    `;
     }
 
     // Format the date
@@ -232,6 +215,15 @@ export const sendOwnerAppointmentNotification = async (appointment: any) => {
             <div class="details-item">
               <strong>Notes:</strong> ${appointment.notes}
             </div>` : ''}
+            ${appointment.referenceImage ? `
+            <div class="details-item" style="text-align: center; margin-top: 20px;">
+              <h4 style="color: #ff69b4; margin-bottom: 10px;">Client's Reference Image</h4>
+              <img src="${appointment.referenceImage}" alt="Reference Image" style="max-width: 100%; border-radius: 8px; border: 2px solid #ffd1e0;" />
+              <p style="font-size: 12px; color: #999; margin-top: 5px;">
+                If the image doesn't display, you can view it <a href="${appointment.referenceImage}" target="_blank" style="color: #ff69b4; text-decoration: underline;">here</a>.
+              </p>
+            </div>
+            ` : ''}
           </div>
 
           <div class="appointment-details">
@@ -268,7 +260,7 @@ export const sendOwnerAppointmentNotification = async (appointment: any) => {
         name: 'Pearl4Nails'
       },
       to: [{
-        email: process.env.NODE_ENV === 'production'
+        email: process.env.NODE_ENV === 'production' 
           ? (process.env.OWNER_EMAIL || process.env.EMAIL_FROM)
           : (process.env.TEST_EMAIL || 'test@example.com')
       }],

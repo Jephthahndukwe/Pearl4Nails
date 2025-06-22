@@ -6,6 +6,8 @@ import { sendWhatsAppNotification } from '../../services/whatsapp';
 import { sendOwnerAppointmentNotification } from '../../services/owner-email';
 import { getAppointmentCollection } from '@/app/lib/mongodb';
 import { clearTimeSlotCache } from '../../services/appointment';
+import { unlink } from 'fs/promises';
+import { join } from 'path';
 
 export async function POST(req: NextRequest) {
   try {
@@ -101,17 +103,44 @@ export async function POST(req: NextRequest) {
       rawTime: appointmentData.time
     }, null, 2));
 
-    // Save to MongoDB
     try {
-      const collection = await getAppointmentCollection();
-      if (!collection) {
-        console.error('Failed to connect to MongoDB collection');
-        return new NextResponse('Database connection error', { status: 500 });
+      // Upload reference image to Cloudinary if it exists and is a local file
+      if (appointment.referenceImage && appointment.referenceImage.startsWith('/uploads/')) {
+        try {
+          const uploadResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/upload`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              filePath: appointment.referenceImage
+            })
+          });
+
+          if (!uploadResponse.ok) {
+            throw new Error('Failed to upload image to Cloudinary');
+          }
+
+          const { secure_url } = await uploadResponse.json();
+          // Update the referenceImage with Cloudinary URL
+          appointment.referenceImage = secure_url;
+        } catch (error) {
+          console.error('Error uploading image to Cloudinary:', error);
+          // Don't fail the booking if image upload fails
+          // Just log the error and continue with the local URL
+        }
       }
 
-      const result = await collection.insertOne(appointment);
+      // Save to database
+      const appointments = await getAppointmentCollection();
+      const result = await appointments.insertOne(appointment);
+
+      if (!result.insertedId) {
+        throw new Error('Failed to save appointment to database');
+      }
+
       console.log('Appointment saved to MongoDB:', result.insertedId);
-      
+        
       // Clear the time slot cache for this date to ensure availability is updated
       clearTimeSlotCache(formattedDate);
     } catch (dbError) {

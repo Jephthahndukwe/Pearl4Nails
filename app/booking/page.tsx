@@ -447,6 +447,7 @@ export default function BookingPage() {
       const formData = new FormData();
       formData.append('file', file);
 
+      // Upload to local storage first
       const response = await fetch('/api/upload', {
         method: 'POST',
         body: formData,
@@ -458,11 +459,12 @@ export default function BookingPage() {
       }
 
       const result = await response.json();
-      if (!result.secure_url) {
-        throw new Error('No secure URL returned from server');
+      if (!result.localUrl) {
+        throw new Error('No local URL returned from server');
       }
       
-      setReferenceImage(result.secure_url);
+      // Store the local URL - this will be used to upload to Cloudinary later
+      setReferenceImage(result.localUrl);
     } catch (error) {
       console.error('Error uploading image:', error);
       alert('Failed to upload image. Please try again.');

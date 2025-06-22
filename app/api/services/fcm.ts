@@ -43,6 +43,7 @@ export const sendPushNotification = async (bookingDetails: any) => {
         bookingDetails.serviceTypeName || bookingDetails.serviceName || bookingDetails.service || "Service"
       const serviceDuration = bookingDetails.serviceDuration ? ` (${bookingDetails.serviceDuration})` : ""
       servicesInfo = `${serviceName}${serviceDuration}`
+
     }
 
     // Get customer info from either customer object or direct properties

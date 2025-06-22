@@ -289,9 +289,9 @@ export const sendAppointmentConfirmation = async (appointment: any): Promise<boo
               ${appointment.referenceImage ? `
               <div class="details-item" style="text-align: center; margin-top: 20px;">
                 <h4 style="color: #ff69b4; margin-bottom: 10px;">Your Reference Image</h4>
-                <img src="${process.env.NEXT_PUBLIC_APP_URL}${appointment.referenceImage}" alt="Reference Image" style="max-width: 100%; border-radius: 8px; border: 2px solid #ffd1e0;" />
+                <img src="${appointment.referenceImage}" alt="Reference Image" style="max-width: 100%; border-radius: 8px; border: 2px solid #ffd1e0;" />
                 <p style="font-size: 12px; color: #999; margin-top: 5px;">
-                  If the image doesn't display, you can view it <a href="${process.env.NEXT_PUBLIC_APP_URL}${appointment.referenceImage}" target="_blank" style="color: #ff69b4; text-decoration: underline;">here</a>.
+                  If the image doesn't display, you can view it <a href="${appointment.referenceImage}" target="_blank" style="color: #ff69b4; text-decoration: underline;">here</a>.
                 </p>
               </div>
               ` : ''}

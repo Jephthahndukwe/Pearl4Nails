@@ -1,11 +1,42 @@
 import { NextResponse } from 'next/server';
-import { writeFile, mkdir } from 'fs/promises';
-import { join } from 'path';
-import { v4 as uuidv4 } from 'uuid';
+// Use require to avoid TypeScript errors with Cloudinary
+const cloudinary = require('cloudinary').v2;
 
-// Ensure the uploads directory exists
-const UPLOAD_DIR = join(process.cwd(), 'public/uploads');
-const PUBLIC_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+  secure: true
+});
+
+// Helper function to upload file to Cloudinary
+const uploadToCloudinary = (file: File): Promise<{secure_url: string, public_id: string}> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      cloudinary.uploader.upload(
+        event.target?.result as string,
+        { folder: 'pearl4nails' },
+        (error: any, result: any) => {
+          if (error) {
+            console.error('Cloudinary upload error:', error);
+            return reject(error);
+          }
+          resolve({
+            secure_url: result.secure_url,
+            public_id: result.public_id
+          });
+        }
+      );
+    };
+    reader.onerror = (error) => {
+      console.error('FileReader error:', error);
+      reject(error);
+    };
+    reader.readAsDataURL(file);
+  });
+};
 
 export async function POST(request: Request) {
   try {
@@ -19,33 +50,31 @@ export async function POST(request: Request) {
       );
     }
 
-    // Create uploads directory if it doesn't exist
-    try {
-      await mkdir(UPLOAD_DIR, { recursive: true });
-    } catch (error) {
-      console.error('Error creating uploads directory:', error);
+    // Check file type
+    if (!file.type.startsWith('image/')) {
       return NextResponse.json(
-        { error: 'Failed to create upload directory' },
-        { status: 500 }
+        { error: 'Only image files are allowed' },
+        { status: 400 }
       );
     }
 
-    // Generate unique filename
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${uuidv4()}.${fileExt}`;
-    const filePath = join(UPLOAD_DIR, fileName);
+    // Check file size (max 5MB)
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      return NextResponse.json(
+        { error: 'File size exceeds 5MB limit' },
+        { status: 400 }
+      );
+    }
 
-    // Convert file to buffer and save
-    const buffer = Buffer.from(await file.arrayBuffer());
-    await writeFile(filePath, buffer);
-
-    // Return public URL
-    const publicUrl = `${PUBLIC_URL}/uploads/${fileName}`;
+    // Upload to Cloudinary
+    const { secure_url, public_id } = await uploadToCloudinary(file);
     
     return NextResponse.json({
       success: true,
-      filePath: `/uploads/${fileName}`,
-      publicUrl
+      secure_url,
+      public_id,
+      fileName: file.name
     });
 
   } catch (error) {

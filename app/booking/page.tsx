@@ -426,6 +426,18 @@ export default function BookingPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Check file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please upload an image file (JPEG, PNG, etc.)');
+      return;
+    }
+
+    // Check file size (5MB max)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Image size should be less than 5MB');
+      return;
+    }
+
     // Create preview URL immediately
     const previewUrl = URL.createObjectURL(file);
     setPreviewImage(previewUrl);
@@ -446,7 +458,11 @@ export default function BookingPage() {
       }
 
       const result = await response.json();
-      setReferenceImage(result.publicUrl);
+      if (!result.secure_url) {
+        throw new Error('No secure URL returned from server');
+      }
+      
+      setReferenceImage(result.secure_url);
     } catch (error) {
       console.error('Error uploading image:', error);
       alert('Failed to upload image. Please try again.');

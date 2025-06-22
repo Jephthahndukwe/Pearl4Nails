@@ -61,29 +61,29 @@ const setupConnectionEventListeners = () => {
   if (!client) return;
 
   // Connection monitoring
-  client.on('serverHeartbeatFailed', (event) => {
-    // console.warn('💓 MongoDB heartbeat failed:', event.failure?.message || 'Unknown error');
-  });
+  // client.on('serverHeartbeatFailed', (event) => {
+  //   console.warn('💓 MongoDB heartbeat failed:', event.failure?.message || 'Unknown error');
+  // });
 
-  client.on('serverHeartbeatSucceeded', () => {
-    // console.debug('💓 MongoDB heartbeat succeeded');
-  });
+  // client.on('serverHeartbeatSucceeded', () => {
+  //   console.debug('💓 MongoDB heartbeat succeeded');
+  // });
 
-  client.on('connectionPoolCreated', () => {
-    // console.log('🔄 MongoDB connection pool created');
-  });
+  // client.on('connectionPoolCreated', () => {
+  //   console.log('🔄 MongoDB connection pool created');
+  // });
 
-  client.on('connectionPoolClosed', () => {
-    // console.log('🔌 MongoDB connection pool closed');
-  });
+  // client.on('connectionPoolClosed', () => {
+  //   console.log('🔌 MongoDB connection pool closed');
+  // });
 
-  client.on('connectionPoolReady', () => {
-    // console.log('✅ MongoDB connection pool ready');
-  });
+  // client.on('connectionPoolReady', () => {
+  //   console.log('✅ MongoDB connection pool ready');
+  // });
 
-  client.on('connectionPoolCleared', (event) => {
-    // console.warn('⚠️ MongoDB connection pool cleared');
-  });
+  // client.on('connectionPoolCleared', (event) => {
+  //   console.warn('⚠️ MongoDB connection pool cleared');
+  // });
 
   client.on('close', () => {
     // console.log('🔌 MongoDB connection closed');

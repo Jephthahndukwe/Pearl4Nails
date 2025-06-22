@@ -41,11 +41,20 @@ export default function ContactPage() {
                   </div>
                 </div>
 
-                <div className="flex items-start">
-                  <MapPin className="h-5 w-5 text-pink-500 mr-3 mt-0.5" />
-                  <div>
-                    <h3 className="font-medium">Location</h3>
-                    <p className="text-gray-600">15 Osolo Way Off 7&8 bus stop, Ajao estate, Lagos, Nigeria</p>
+                <div className="space-y-4">
+                  <div className="flex items-start">
+                    <MapPin className="h-5 w-5 text-pink-500 mr-3 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <h3 className="font-medium">Ejigbo Branch</h3>
+                      <p className="text-gray-600">Iyana Ejigbo round at Munchiba tech, Lagos, Nigeria</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start">
+                    <MapPin className="h-5 w-5 text-pink-500 mr-3 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <h3 className="font-medium">Ajao Estate Branch</h3>
+                      <p className="text-gray-600">15 Osolo Way Off 7&8 bus stop, Ajao estate, Lagos, Nigeria</p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -64,21 +73,43 @@ export default function ContactPage() {
           </div>
 
           <div>
-            <h2 className="text-2xl font-bold text-pink-500 mb-6">Our Location</h2>
-            <Card className="p-6">
-              <div className="aspect-[4/3]">
-                <iframe
-                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3963.754440047204!2d3.357327675041829!3d6.590293495478828!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x103b90b579280117%3A0x5b7e6b6b6b6b6b6b!2s15%20Osolo%20Way%2C%20Ajao%20Estate%2C%20Lagos!5e0!3m2!1sen!2sng!4v1712919330000!5m2!1sen!2sng"
-                  width="100%"
-                  height="100%"
-                  style={{ border: 0 }}
-                  allowFullScreen=""
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                  className="rounded-lg"
-                ></iframe>
+            <h2 className="text-2xl font-bold text-pink-500 mb-6">Our Locations</h2>
+            <div className="space-y-6">
+              <div>
+                <h3 className="font-medium mb-2">Ejigbo Branch</h3>
+                <Card className="p-6">
+                  <div className="aspect-[4/3]">
+                    <iframe
+                      src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3963.847547083834!2d3.2963202756801!3d6.5409280229591324!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x103b8feba9a9913d%3A0x4c26f1b0029c13dc!2sMunchiba%20Tech!5e0!3m2!1sen!2sng!4v1750617175857!5m2!1sen!2sng"
+                      width="600"
+                      height="450"
+                      style={{ border: 0 }}
+                      allowFullScreen
+                      loading="lazy"
+                      referrerPolicy="no-referrer-when-downgrade"
+                      className="rounded-lg"
+                    ></iframe>
+                  </div>
+                </Card>
               </div>
-            </Card>
+              <div>
+                <h3 className="font-medium mb-2">Ajao Estate Branch</h3>
+                <Card className="p-6">
+                  <div className="aspect-[4/3]">
+                    <iframe
+                      src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3963.754440047204!2d3.357327675041829!3d6.590293495478828!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x103b90b579280117%3A0x5b7e6b6b6b6b6b6b!2s15%20Osolo%20Way%2C%20Ajao%20Estate%2C%20Lagos!5e0!3m2!1sen!2sng!4v1712919330000!5m2!1sen!2sng"
+                      width="100%"
+                      height="100%"
+                      style={{ border: 0 }}
+                      allowFullScreen
+                      loading="lazy"
+                      referrerPolicy="no-referrer-when-downgrade"
+                      className="rounded-lg"
+                    ></iframe>
+                  </div>
+                </Card>
+              </div>
+            </div>
           </div>
         </div>
       </div>

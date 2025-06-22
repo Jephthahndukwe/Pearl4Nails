@@ -447,7 +447,6 @@ export default function BookingPage() {
       const formData = new FormData();
       formData.append('file', file);
 
-      // Upload the file (handles both local and Cloudinary uploads)
       const response = await fetch('/api/upload', {
         method: 'POST',
         body: formData,
@@ -459,19 +458,11 @@ export default function BookingPage() {
       }
 
       const result = await response.json();
-      
-      if (!result.url) {
-        throw new Error('No URL returned from server');
+      if (!result.secure_url) {
+        throw new Error('No secure URL returned from server');
       }
       
-      // Store the image URL (could be local or Cloudinary)
-      setReferenceImage(result.url);
-      
-      // If we're in production and using Cloudinary, we can use the URL directly
-      if (result.isCloudinary) {
-        // No need to do anything special, the URL is already in the Cloud
-      }
-      
+      setReferenceImage(result.secure_url);
     } catch (error) {
       console.error('Error uploading image:', error);
       alert('Failed to upload image. Please try again.');

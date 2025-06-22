@@ -6,8 +6,6 @@ import { sendWhatsAppNotification } from '../../services/whatsapp';
 import { sendOwnerAppointmentNotification } from '../../services/owner-email';
 import { getAppointmentCollection } from '@/app/lib/mongodb';
 import { clearTimeSlotCache } from '../../services/appointment';
-import { unlink } from 'fs/promises';
-import { join } from 'path';
 
 export async function POST(req: NextRequest) {
   try {
@@ -103,22 +101,17 @@ export async function POST(req: NextRequest) {
       rawTime: appointmentData.time
     }, null, 2));
 
+    // Save to MongoDB
     try {
-      // Save to database
-      const appointments = await getAppointmentCollection();
-      const result = await appointments.insertOne({
-        ...appointment,
-        // Ensure we're using the latest timestamp
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      });
-
-      if (!result.insertedId) {
-        throw new Error('Failed to save appointment to database');
+      const collection = await getAppointmentCollection();
+      if (!collection) {
+        console.error('Failed to connect to MongoDB collection');
+        return new NextResponse('Database connection error', { status: 500 });
       }
 
+      const result = await collection.insertOne(appointment);
       console.log('Appointment saved to MongoDB:', result.insertedId);
-        
+      
       // Clear the time slot cache for this date to ensure availability is updated
       clearTimeSlotCache(formattedDate);
     } catch (dbError) {

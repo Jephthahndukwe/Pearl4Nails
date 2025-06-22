@@ -104,36 +104,14 @@ export async function POST(req: NextRequest) {
     }, null, 2));
 
     try {
-      // Upload reference image to Cloudinary if it exists and is a local file
-      if (appointment.referenceImage && appointment.referenceImage.startsWith('/uploads/')) {
-        try {
-          const uploadResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/upload`, {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              filePath: appointment.referenceImage
-            })
-          });
-
-          if (!uploadResponse.ok) {
-            throw new Error('Failed to upload image to Cloudinary');
-          }
-
-          const { secure_url } = await uploadResponse.json();
-          // Update the referenceImage with Cloudinary URL
-          appointment.referenceImage = secure_url;
-        } catch (error) {
-          console.error('Error uploading image to Cloudinary:', error);
-          // Don't fail the booking if image upload fails
-          // Just log the error and continue with the local URL
-        }
-      }
-
       // Save to database
       const appointments = await getAppointmentCollection();
-      const result = await appointments.insertOne(appointment);
+      const result = await appointments.insertOne({
+        ...appointment,
+        // Ensure we're using the latest timestamp
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
 
       if (!result.insertedId) {
         throw new Error('Failed to save appointment to database');

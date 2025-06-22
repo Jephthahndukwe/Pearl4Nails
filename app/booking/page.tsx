@@ -447,7 +447,7 @@ export default function BookingPage() {
       const formData = new FormData();
       formData.append('file', file);
 
-      // Upload to local storage first
+      // Upload the file (handles both local and Cloudinary uploads)
       const response = await fetch('/api/upload', {
         method: 'POST',
         body: formData,
@@ -459,12 +459,19 @@ export default function BookingPage() {
       }
 
       const result = await response.json();
-      if (!result.localUrl) {
-        throw new Error('No local URL returned from server');
+      
+      if (!result.url) {
+        throw new Error('No URL returned from server');
       }
       
-      // Store the local URL - this will be used to upload to Cloudinary later
-      setReferenceImage(result.localUrl);
+      // Store the image URL (could be local or Cloudinary)
+      setReferenceImage(result.url);
+      
+      // If we're in production and using Cloudinary, we can use the URL directly
+      if (result.isCloudinary) {
+        // No need to do anything special, the URL is already in the Cloud
+      }
+      
     } catch (error) {
       console.error('Error uploading image:', error);
       alert('Failed to upload image. Please try again.');

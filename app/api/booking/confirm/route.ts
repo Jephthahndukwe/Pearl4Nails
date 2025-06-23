@@ -133,11 +133,11 @@ export async function POST(req: NextRequest) {
         ),
         
         // Send push notification via Pushover
-        sendPushNotification(appointment).then(result => 
-          console.log('Push notification sent:', result ? 'Success' : 'Failed')
-        ).catch(error => 
-          console.error("Failed to send push notification:", error)
-        ),
+        // sendPushNotification(appointment).then(result => 
+        //   console.log('Push notification sent:', result ? 'Success' : 'Failed')
+        // ).catch(error => 
+        //   console.error("Failed to send push notification:", error)
+        // ),
         
         // Send WhatsApp notification via CallMeBot
         sendWhatsAppNotification(appointment).then(result =>

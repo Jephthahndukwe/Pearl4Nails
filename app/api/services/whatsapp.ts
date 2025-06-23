@@ -1,245 +1,151 @@
-import axios from "axios"
+import axios from "axios";
 
 /**
  * Send WhatsApp notification for appointment bookings
+ * Updated to use native fetch instead of axios
  */
+
+// Global lock to prevent rapid resends (in-memory throttle)
+let lastSentAt = 0;
+let lastBookingId = '';
+
+
 export const sendWhatsAppNotification = async (bookingDetails: any) => {
+
+  const now = Date.now();
+  const currentBookingId = bookingDetails._id?.toString?.() || bookingDetails.appointmentId?.toString?.() || '';
+
+  // 🚨 Cooldown of 15 seconds between messages
+  if (currentBookingId === lastBookingId && now - lastSentAt < 15000) {
+    console.warn("Throttled: WhatsApp message already sent recently for this booking.");
+    return false;
+  }
+
+  lastSentAt = now;
+  lastBookingId = currentBookingId;
+
   try {
-    // Function to add field if it exists
     const addFieldIfExists = (field: string, label: string, value: any) => {
-      return value ? `\n${label}: ${value}` : ""
-    }
+      return value ? `\n${label}: ${value}` : "";
+    };
 
-    // Build optional fields section
-    let optionalFields = ""
+    let optionalFields = "";
+    const customerNotes = bookingDetails.customer?.notes || bookingDetails.notes;
+    optionalFields += addFieldIfExists("notes", "Special Notes", customerNotes);
 
-    // Add customer notes if provided
-    const customerNotes = bookingDetails.customer?.notes || bookingDetails.notes
-    optionalFields += addFieldIfExists("notes", "Special Notes", customerNotes)
-
-    // Add reference image as a link if uploaded
     if (bookingDetails.referenceImage) {
-      // Don't send base64 data - instead, provide a link to view the image
-      // Check for appointmentId in different formats (_id from MongoDB or appointmentId property)
-      let appointmentId = bookingDetails._id || bookingDetails.appointmentId
-
-      // Convert ObjectId to string if needed
+      let appointmentId = bookingDetails._id || bookingDetails.appointmentId;
       if (appointmentId && typeof appointmentId === "object" && appointmentId.toString) {
-        appointmentId = appointmentId.toString()
+        appointmentId = appointmentId.toString();
       }
-
       if (appointmentId) {
-        const imageUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/images/${appointmentId}`
-        optionalFields += `\nReference Image: ${imageUrl}`
+        const imageUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/images/${appointmentId}`;
+        optionalFields += `\nReference Image: ${imageUrl}`;
       } else {
-        optionalFields += `\nReference Image: Uploaded ✓`
+        optionalFields += `\nReference Image: Uploaded ✓`;
       }
     }
 
-    // Add nail shape if provided (for nails service)
-    if (bookingDetails.nailShape) {
-      optionalFields += addFieldIfExists("nailShape", "Nail Shape", bookingDetails.nailShape)
-    }
+    optionalFields += addFieldIfExists("nailShape", "Nail Shape", bookingDetails.nailShape);
+    optionalFields += addFieldIfExists("nailDesign", "Nail Design", bookingDetails.nailDesign);
+    optionalFields += addFieldIfExists("tattooLocation", "Tattoo Location", bookingDetails.tattooLocation);
+    optionalFields += addFieldIfExists("tattooSize", "Tattoo Size", bookingDetails.tattooSize);
 
-    if (bookingDetails.nailDesign) {
-      optionalFields += addFieldIfExists("nailDesign", "Nail Design", bookingDetails.nailDesign)
-    }
-
-    // Add tattoo details if provided (for tattoo service)
-    if (bookingDetails.tattooLocation) {
-      optionalFields += addFieldIfExists("tattooLocation", "Tattoo Location", bookingDetails.tattooLocation)
-    }
-
-    if (bookingDetails.tattooSize) {
-      optionalFields += addFieldIfExists("tattooSize", "Tattoo Size", bookingDetails.tattooSize)
-    }
-
-    // If no optional fields were provided
     if (!optionalFields) {
-      optionalFields = "\nNo additional details provided"
+      optionalFields = "\nNo additional details provided";
     }
 
-    // Get customer info from either customer object or direct properties
-    const customerName = bookingDetails.customer?.name || bookingDetails.name || "Customer"
-    const customerEmail = bookingDetails.customer?.email || bookingDetails.email || ""
-    const customerPhone = bookingDetails.customer?.phone || bookingDetails.phone || ""
+    const customerName = bookingDetails.customer?.name || bookingDetails.name || "Customer";
+    const customerEmail = bookingDetails.customer?.email || bookingDetails.email || "";
+    const customerPhone = bookingDetails.customer?.phone || bookingDetails.phone || "";
 
-    // Format services information
-    let servicesInfo = ""
-    let priceDisplay = ""
-    let durationDisplay = ""
-    let totalPriceDisplay = ""
+    let servicesInfo = "";
+    let priceDisplay = "";
+    let durationDisplay = "";
+    let totalPriceDisplay = "";
 
     if (bookingDetails.services && bookingDetails.services.length > 0) {
-      // Multiple services
       servicesInfo = bookingDetails.services
         .map((service: any, index: number) => {
-          let serviceText = `${index + 1}. ${service.serviceName} - ${service.serviceTypeName}`
-          if (service.serviceDuration) {
-            serviceText += ` (${service.serviceDuration})`
-          }
-          if (service.servicePrice) {
-            serviceText += ` - ${service.servicePrice}`
-          }
-          return serviceText
+          let serviceText = `${index + 1}. ${service.serviceName} - ${service.serviceTypeName}`;
+          if (service.serviceDuration) serviceText += ` (${service.serviceDuration})`;
+          if (service.servicePrice) serviceText += ` - ${service.servicePrice}`;
+          return serviceText;
         })
-        .join("\n")
+        .join("\n");
 
-      // Add total duration if available
-      durationDisplay = bookingDetails.totalDuration ? `\nTotal Duration: ${bookingDetails.totalDuration}` : ""
-      
-      // Add total price if available
+      durationDisplay = bookingDetails.totalDuration ? `\nTotal Duration: ${bookingDetails.totalDuration}` : "";
+
       if (bookingDetails.totalPrice) {
-        const { min, max } = bookingDetails.totalPrice
-        totalPriceDisplay = min === max 
-          ? `\nTotal Price: ₦${min.toLocaleString()}` 
-          : `\nTotal Price: ₦${min.toLocaleString()} - ₦${max.toLocaleString()}`
+        const { min, max } = bookingDetails.totalPrice;
+        totalPriceDisplay = min === max
+          ? `\nTotal Price: ₦${min.toLocaleString()}`
+          : `\nTotal Price: ₦${min.toLocaleString()} - ₦${max.toLocaleString()}`;
       }
     } else {
-      // Single service (legacy format)
-      const serviceDisplay =
-        bookingDetails.serviceTypeName || bookingDetails.serviceName || bookingDetails.service || "Service"
-      servicesInfo = serviceDisplay
-      priceDisplay = bookingDetails.servicePrice ? `\nPrice: ${bookingDetails.servicePrice}` : ""
-      durationDisplay = bookingDetails.serviceDuration ? `\nDuration: ${bookingDetails.serviceDuration}` : ""
+      const serviceDisplay = bookingDetails.serviceTypeName || bookingDetails.serviceName || bookingDetails.service || "Service";
+      servicesInfo = serviceDisplay;
+      priceDisplay = bookingDetails.servicePrice ? `\nPrice: ${bookingDetails.servicePrice}` : "";
+      durationDisplay = bookingDetails.serviceDuration ? `\nDuration: ${bookingDetails.serviceDuration}` : "";
     }
 
-    const message =
-      bookingDetails.status === "cancelled"
-        ? `Appointment Cancelled!
-\n\nServices:\n${servicesInfo}${priceDisplay}${durationDisplay}\nDate: ${bookingDetails.date}\nTime: ${bookingDetails.time}\nCustomer: ${customerName}\nPhone: ${customerPhone}\nEmail: ${customerEmail}\nLocation: ${bookingDetails.location}${optionalFields}`
-        : `New Appointment Booking!\n\n` +
-        `Name: ${customerName}` +
-        `\nEmail: ${customerEmail || 'Not provided'}` +
-        `\nPhone: ${customerPhone || 'Not provided'}` +
-        `\n\nServices:\n${servicesInfo}` +
-        priceDisplay +
-        durationDisplay +
-        totalPriceDisplay +
-        `\n\nDate: ${bookingDetails.date}` +
-        `\nTime: ${bookingDetails.time}` +
-        `\nLocation: ${bookingDetails.location || 'Not specified'}` +
-        `\n\nAdditional Details:${optionalFields}`
+    // Format message with proper encoding and structure
+    // Format message with all appointment details matching owner email notification
+    const status = bookingDetails.status === "cancelled" ? "Appointment Cancelled!" : "New Appointment Booking!";
+    const formattedDate = new Date(bookingDetails.date).toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
 
-    // First try: CallMeBot API
-    try {
-      // Format phone number (remove any non-numeric characters and add country code if needed)
-      let phoneNumber = (process.env.WHATSAPP_PHONE_NUMBER || '').replace(/\D/g, '');
-      if (phoneNumber.startsWith('0')) {
-        phoneNumber = '234' + phoneNumber.substring(1); // Convert to international format for Nigeria
+    // Build message using string concatenation instead of template literals
+    const message = status + '\n\n' +
+      'Client Information:\n' +
+      'Name: ' + customerName + '\n' +
+      'Email: ' + customerEmail + '\n' +
+      'Phone: ' + customerPhone + '\n' +
+      (bookingDetails.notes ? 'Notes: ' + bookingDetails.notes + '\n' : '') +
+      '\nAppointment Details:\n' +
+      'Date: ' + formattedDate + '\n' +
+      'Time: ' + bookingDetails.time + '\n\n' +
+      'Services Booked:\n' +
+      servicesInfo + priceDisplay + durationDisplay + totalPriceDisplay +
+      (bookingDetails.referenceImage ? '\nInspo Image: ' + bookingDetails.referenceImage : '');
+
+    // Revert to using environment variables
+    const phoneNumber = process.env.WHATSAPP_PHONE_NUMBER;
+    const apiKey = process.env.CALLMEBOT_API_KEY;
+
+    if (!phoneNumber || !apiKey) {
+      throw new Error("Missing WhatsApp number or API key in environment variables.");
+    }
+
+    // Use the message and encode it with encodeURIComponent
+    const url = `https://api.callmebot.com/whatsapp.php?phone=${phoneNumber}&text=${encodeURIComponent(message)}&apikey=${apiKey}`;
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'User-Agent': 'Pearl4Nails/1.0',
+        'Accept': 'text/plain'
       }
-      
-      const response = await axios.get("https://api.callmebot.com/whatsapp.php", {
-        params: {
-          phone: phoneNumber,
-          text: message,
-          apikey: process.env.CALLMEBOT_API_KEY,
-        },
-        timeout: 10000, // 10 second timeout
-        timeoutErrorMessage: 'CallMeBot API request timed out',
-        headers: {
-          'User-Agent': 'Pearl4Nails/1.0',
-          'Accept': 'application/json'
-        }
-      })
+    });
+    const text = await response.text();
 
-      console.log("CallMeBot API response status:", response.status, "data:", response.data)
-      
-      // Check for successful response (CallMeBot returns 200 OK on success with 'OK' in the response)
-      if (response.status === 200 && (response.data === 'OK' || response.data.includes('Message queued'))) {
-        return true
-      }
-      console.warn('CallMeBot API returned non-OK response:', response.status, response.data)
-    } catch (error: any) {
-      console.error('CallMeBot API error:', {
-        code: error.code,
-        message: error.message,
-        response: error.response?.data
-      })
+    if (response.status === 200 && /OK|queued|sent/i.test(text)) {
+      console.log("WhatsApp notification sent successfully");
+      return true;
+    } else {
+      console.error("CallMeBot Error Response:", text);
+      return false;
     }
 
-    // Fallback: Log to console if in development
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Would send WhatsApp message (in production):', message)
-      return true
-    }
-
-    return false
   } catch (error: any) {
     console.error('Unexpected error in WhatsApp notification:', {
-      code: error.code,
       message: error.message,
       stack: error.stack
-    })
-    return false
+    });
+    return false;
   }
-}
-
-/**
- * Send WhatsApp notification for training registrations
- */
-export const sendTrainingWhatsAppNotification = async (registration: any) => {
-  try {
-    // Function to add field if it exists
-    const addFieldIfExists = (field: string, label: string, value: any) => {
-      return value ? `\n${label}: ${value}` : ""
-    }
-
-    // Build optional fields section
-    let optionalFields = ""
-
-    // Add previous experience if provided
-    optionalFields += addFieldIfExists("previousExperience", "Previous Experience", registration.previousExperience)
-
-    // Add additional message if provided
-    optionalFields += addFieldIfExists("message", "Additional Message", registration.message)
-
-    // If no optional fields were provided
-    if (!optionalFields) {
-      optionalFields = "\nNo additional details provided"
-    }
-
-    const message = `New Training Registration!
-
-Course: ${registration.course}
-Duration: ${registration.duration}
-Equipment: ${registration.equipment}
-Price: ${registration.price}
-Date: ${registration.date}
-Student: ${registration.fullName}
-Phone: ${registration.phoneNumber}
-Email: ${registration.email}${optionalFields}`
-
-    // Using the original 'message' parameter for proper formatting
-    const response = await axios.get("https://api.callmebot.com/whatsapp.php", {
-      params: {
-        phone: process.env.WHATSAPP_PHONE_NUMBER,
-        message: message,
-        apikey: process.env.CALLMEBOT_API_KEY,
-      },
-    })
-
-    return response.data === "OK"
-  } catch (error) {
-    console.error("Error sending WhatsApp message for training:", error)
-    return false
-  }
-}
-
-// Add API route handler for WhatsApp notification service
-export async function POST(req: Request) {
-  try {
-    const appointment = await req.json()
-    const result = await sendWhatsAppNotification(appointment)
-    return new Response(JSON.stringify({ success: result }), {
-      headers: { "Content-Type": "application/json" },
-      status: result ? 200 : 500,
-    })
-  } catch (error) {
-    console.error("Error in WhatsApp notification service API:", error)
-    return new Response(JSON.stringify({ success: false, error: "Internal server error" }), {
-      headers: { "Content-Type": "application/json" },
-      status: 500,
-    })
-  }
-}
+};

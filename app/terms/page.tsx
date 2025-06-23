@@ -164,9 +164,10 @@ export default function TermsPage() {
               If you have any questions about these Terms and Conditions, please contact us:
             </p>
             <p>Pearl4nails</p>
+            <p>Iyana Ejigbo round at Munchiba tech, Lagos, Nigeria</p>
             <p>15 Osolo Way Off 7&8 bus stop, Ajao estate, Lagos, Nigeria</p>
             <p>Phone: 09160763206</p>
-            <p>Email: nwabuezemercy2@gmail.com</p>
+            <p>Email: pearl4nails@gmail.com</p>
           </div>
 
           <div className="text-center mt-12">

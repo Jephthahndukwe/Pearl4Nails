@@ -92,7 +92,7 @@ const sendEmailWithRetry = async (
 
       // Prepare email data for Nodemailer
       const emailData = {
-        from: `booking@pearl4nails.com <${process.env.EMAIL_FROM}`,
+        from: `Pearl4Nails <${process.env.EMAIL_FROM}`,
         to: toEmail,
         subject: mailOptions.subject,
         html: mailOptions.html,

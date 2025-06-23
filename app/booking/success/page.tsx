@@ -140,8 +140,7 @@ export default function BookingSuccessPage() {
             const serviceIds = JSON.parse(servicesParam);
             services = serviceIds.map((serviceId: string) => {
               const service = findServiceById(serviceId);
-              const serviceTypeId = selectedServiceTypes[serviceId];
-              const serviceType = serviceTypeId ? findServiceTypeById(serviceId, serviceTypeId) : null;
+                const serviceType = findServiceTypeById(serviceId, parsedServiceTypes[serviceId]);
 
               return {
                 serviceName: service?.name || "Service",
@@ -558,12 +557,12 @@ export default function BookingSuccessPage() {
               )}
 
               {/* Show reference image if uploaded */}
-              {/* {bookingDetails.referenceImage && (
+              {bookingDetails.referenceImage && (
                 <>
-                  <p className="text-gray-600">Reference Image:</p>
+                  <p className="text-gray-600">Inspo Image:</p>
                   <p className="font-medium text-green-600">Uploaded ✓</p>
                 </>
-              )} */}
+              )}
             </div>
           </div>
 

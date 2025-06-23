@@ -92,7 +92,7 @@ const sendEmailWithRetry = async (
 
       // Prepare email data for Nodemailer
       const emailData = {
-        from: process.env.EMAIL_FROM,
+        from: `booking@pearl4nails.com <${process.env.EMAIL_FROM}`,
         to: toEmail,
         subject: mailOptions.subject,
         html: mailOptions.html,
@@ -288,7 +288,7 @@ export const sendAppointmentConfirmation = async (appointment: any): Promise<boo
               </div>
               ${appointment.referenceImage ? `
               <div class="details-item" style="text-align: center; margin-top: 20px;">
-                <h4 style="color: #ff69b4; margin-bottom: 10px;">Your Reference Image</h4>
+                <h4 style="color: #ff69b4; margin-bottom: 10px;">Your Inspo Image</h4>
                 <img src="${appointment.referenceImage}" alt="Reference Image" style="max-width: 100%; border-radius: 8px; border: 2px solid #ffd1e0;" />
                 <p style="font-size: 12px; color: #999; margin-top: 5px;">
                   If the image doesn't display, you can view it <a href="${appointment.referenceImage}" target="_blank" style="color: #ff69b4; text-decoration: underline;">here</a>.

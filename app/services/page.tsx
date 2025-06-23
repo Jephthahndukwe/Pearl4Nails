@@ -1,18 +1,29 @@
-import ServicesList from "@/components/services-list"
+import React from 'react';
+import ServicesList from '@/components/services-list';
 
-export default function ServicesPage() {
+const ServicesPage = () => {
+
   return (
-    <main className="min-h-screen py-16 px-4">
-      <div className="max-w-6xl mx-auto">
-        <h1 className="text-4xl font-bold text-center text-pink-500 mb-12">Our Services</h1>
-        <p className="text-center text-gray-700 max-w-3xl mx-auto mb-12">
-          At Pearl4nails, we offer a comprehensive range of beauty services to enhance your natural beauty. Our skilled
-          technicians use premium products to deliver stunning results that will leave you feeling confident and
-          beautiful.
-        </p>
+    <div className="min-h-screen bg-neutral-50">
+      <main className="py-24 px-4">
+        <div className="max-w-7xl mx-auto">
+          {/* Header */}
+          <div className="text-center mb-20">
+            <h1 className="text-5xl md:text-6xl font-medium text-pink-600 mb-6 tracking-tight">
+              Our Services
+            </h1>
+            <div className="w-24 h-px bg-pink-600 mx-auto mb-8"></div>
+            <p className="text-lg text-neutral-600 max-w-3xl mx-auto leading-relaxed font-light">
+              Discover our curated collection of beauty services, each designed to enhance your natural radiance
+              with expert techniques and premium products.
+            </p>
+          </div>
 
-        <ServicesList />
-      </div>
-    </main>
-  )
-}
+          <ServicesList />
+        </div>
+      </main>
+    </div>
+  );
+};
+
+export default ServicesPage;

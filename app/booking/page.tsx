@@ -864,10 +864,8 @@ export default function BookingPage() {
                   <h3 className="font-medium mb-4">Select a Time</h3>
                   {totalDuration > 0 && (
                     <div className="mb-4 p-3 bg-blue-50 rounded-lg">
-                      <p className="text-sm text-blue-700">
-                        <p className="text-gray-700">
-                          Your appointment will take {formatDuration(totalDuration)}
-                        </p>
+                      <p className="text-gray-700">
+                        Your appointment will take {formatDuration(totalDuration)}
                       </p>
                     </div>
                   )}
@@ -1068,14 +1066,14 @@ export default function BookingPage() {
 
               {/* Reference Image Upload - For all services */}
               <div className="mb-8">
-                <h3 className="font-medium mb-4">Upload Reference Image (Optional)</h3>
+                <h3 className="font-medium mb-4">Upload Inspo Image (Optional)</h3>
                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
                   {referenceImage ? (
                     <div className="space-y-4">
                       <div className="relative w-full h-48 mx-auto">
                         <Image
                           src={previewImage || referenceImage || "/placeholder.svg?height=200&width=300"}
-                          alt="Reference"
+                          alt="Inspo"
                           fill
                           className="object-contain rounded"
                         />

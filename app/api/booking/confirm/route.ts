@@ -83,6 +83,9 @@ export async function POST(req: NextRequest) {
       environment: process.env.NODE_ENV || "unknown",
       // Include reference image if provided
       referenceImage: appointmentData.referenceImage || null,
+      // Add nail shape and design if provided
+      nailShape: appointmentData.nailShape || null,
+      nailDesign: appointmentData.nailDesign || null,
       // Add raw date for debugging
       rawDate: appointmentData.date,
       rawTime: appointmentData.time,

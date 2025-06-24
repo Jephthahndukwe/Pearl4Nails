@@ -32,7 +32,7 @@ const sendEmailWithNodemailer = async (emailData: {
     const transporter = createTransporter();
 
     // Format addresses for Nodemailer
-    const formatAddress = (addr: { email: string; name?: string }) => 
+    const formatAddress = (addr: { email: string; name?: string }) =>
       addr.name ? `"${addr.name}" <${addr.email}>` : addr.email;
 
     const formatAddresses = (addresses: Array<{ email: string; name?: string }>) =>
@@ -123,6 +123,14 @@ export const sendOwnerAppointmentNotification = async (appointment: any) => {
         <div class="details-item">
           <strong>${index + 1}. Service:</strong> ${service.serviceName} - ${service.serviceTypeName}
         </div>
+         ${service.nailShape ? `
+            <div class="details-item">
+              <strong>Nail Shape:</strong> ${service.nailShape}
+            </div>` : ''}
+            ${service.nailDesign ? `
+            <div class="details-item">
+              <strong>Nail Design:</strong> ${service.nailDesign}
+            </div>` : ''}
         ${service.servicePrice ? `
         <div class="details-item">
           <strong>Price:</strong> ${service.servicePrice}
@@ -141,14 +149,14 @@ export const sendOwnerAppointmentNotification = async (appointment: any) => {
           <strong>Total Duration:</strong> ${appointment.totalDuration}
         </div>`;
       }
-      
+
       // Add total price if available
       if (appointment.totalPrice) {
         const { min, max } = appointment.totalPrice;
-        const priceText = min === max 
-          ? `₦${min.toLocaleString()}` 
+        const priceText = min === max
+          ? `₦${min.toLocaleString()}`
           : `₦${min.toLocaleString()} - ₦${max.toLocaleString()}`;
-          
+
         servicesHtml += `
         <div class="details-item">
           <strong>Total Price:</strong> ${priceText}
@@ -169,6 +177,14 @@ export const sendOwnerAppointmentNotification = async (appointment: any) => {
       <div class="details-item">
         <strong>Service:</strong> ${appointment.serviceTypeName || appointment.serviceName || appointment.service || 'N/A'}
       </div>
+      ${appointment.nailShape ? `
+      <div class="details-item">
+        <strong>Nail Shape:</strong> ${appointment.nailShape}
+      </div>` : ''}
+      ${appointment.nailDesign ? `
+      <div class="details-item">
+        <strong>Nail Design:</strong> ${appointment.nailDesign}
+      </div>` : ''}
       ${appointment.servicePrice ? `
       <div class="details-item">
         <strong>Price:</strong> ${appointment.servicePrice}
@@ -268,7 +284,7 @@ export const sendOwnerAppointmentNotification = async (appointment: any) => {
         name: 'Pearl4Nails'
       },
       to: [{
-        email: process.env.NODE_ENV === 'production' 
+        email: process.env.NODE_ENV === 'production'
           ? (process.env.OWNER_EMAIL || process.env.EMAIL_FROM)
           : (process.env.TEST_EMAIL || 'test@example.com')
       }],

@@ -61,21 +61,21 @@ const sendEmailWithRetry = async (
   baseDelay = 1000
 ): Promise<boolean> => {
   let lastError: any = null;
-  
+
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       console.log(`Attempt ${attempt} to send email to ${mailOptions.to}`);
-      
+
       // For testing, only redirect owner notifications to test email
-      const isOwnerNotification = process.env.EMAIL_FROM && 
+      const isOwnerNotification = process.env.EMAIL_FROM &&
         mailOptions.to === process.env.EMAIL_FROM;
-      
+
       const toEmail = (process.env.NODE_ENV !== 'production' && isOwnerNotification)
         ? (process.env.TEST_EMAIL || 'test@example.com')
         : mailOptions.to;
-        
+
       console.log(`Sending email to:`, toEmail, isOwnerNotification ? '(owner notification)' : '(client email)');
-      
+
       // Generate plain text version from HTML
       const generateTextFromHtml = (html: string): string => {
         return html
@@ -102,12 +102,12 @@ const sendEmailWithRetry = async (
         ...(process.env.NODE_ENV === 'production' && mailOptions.cc && { cc: mailOptions.cc }),
         ...(mailOptions.headers && { headers: mailOptions.headers })
       };
-      
+
       const result = await sendEmailWithNodemailer(emailData);
-      
+
       console.log(`✅ Email sent successfully (Attempt ${attempt}):`, result.messageId);
       return true;
-      
+
     } catch (error: any) {
       lastError = error;
       console.error(`❌ Attempt ${attempt} failed to send email:`, {
@@ -115,37 +115,37 @@ const sendEmailWithRetry = async (
         code: error.code,
         response: error.response,
       });
-      
+
       // Check for permanent failures (authentication, invalid email, etc.)
-      if (error.code === 'EAUTH' || 
-          error.code === 'EENVELOPE' || 
-          error.responseCode === 550 ||
-          error.responseCode === 553) {
+      if (error.code === 'EAUTH' ||
+        error.code === 'EENVELOPE' ||
+        error.responseCode === 550 ||
+        error.responseCode === 553) {
         console.error('Permanent failure, not retrying');
         break;
       }
-      
+
       // If this is the last attempt, don't wait
       if (attempt === maxRetries) break;
-      
+
       // Exponential backoff with jitter
       const delay = Math.min(
         baseDelay * Math.pow(2, attempt - 1) * (0.8 + 0.4 * Math.random()),
         30000
       );
-      
+
       console.log(`Retrying in ${Math.round(delay / 1000)} seconds...`);
       await new Promise(resolve => setTimeout(resolve, delay));
     }
   }
-  
+
   console.error('All email sending attempts failed:', {
     to: mailOptions.to,
     subject: mailOptions.subject,
     error: lastError?.message,
     code: lastError?.code,
   });
-  
+
   throw lastError || new Error('Failed to send email after multiple attempts');
 };
 
@@ -160,6 +160,16 @@ const generateServicesHtml = (appointment: any): string => {
         <div class="details-item">
           <strong>${index + 1}. Service:</strong> ${service.serviceName} - ${service.serviceTypeName}
         </div>
+         ${service.nailShape ? `
+              <div class="details-item">
+                <strong>Nail Shape:</strong> ${service.nailShape}
+              </div>
+              ` : ''}
+              ${service.nailDesign ? `
+              <div class="details-item">
+                <strong>Nail Design:</strong> ${service.nailDesign}
+              </div>
+              ` : ''}
         ${service.servicePrice ? `
         <div class="details-item">
           <strong>Price:</strong> ${service.servicePrice}
@@ -178,14 +188,14 @@ const generateServicesHtml = (appointment: any): string => {
           <strong>Total Duration:</strong> ${appointment.totalDuration}
         </div>`;
     }
-    
+
     // Add total price if available
     if (appointment.totalPrice) {
       const { min, max } = appointment.totalPrice;
-      const priceText = min === max 
-        ? `₦${min.toLocaleString()}` 
+      const priceText = min === max
+        ? `₦${min.toLocaleString()}`
         : `₦${min.toLocaleString()} - ₦${max.toLocaleString()}`;
-        
+
       servicesHtml += `
         <div class="details-item">
           <strong>Total Price:</strong> ${priceText}
@@ -197,6 +207,14 @@ const generateServicesHtml = (appointment: any): string => {
       <div class="details-item">
         <strong>Service:</strong> ${appointment.serviceTypeName || appointment.serviceName || appointment.service}
       </div>
+      ${appointment.nailShape ? `
+      <div class="details-item">
+        <strong>Nail Shape:</strong> ${appointment.nailShape}
+      </div>` : ''}
+      ${appointment.nailDesign ? `
+      <div class="details-item">
+        <strong>Nail Design:</strong> ${appointment.nailDesign}
+      </div>` : ''}
       ${appointment.servicePrice ? `
       <div class="details-item">
         <strong>Price:</strong> ${appointment.servicePrice}
@@ -310,7 +328,7 @@ export const sendAppointmentConfirmation = async (appointment: any): Promise<boo
     `;
 
     console.log("Sending appointment confirmation email to:", customerEmail);
-    
+
     return await sendEmailWithRetry({
       to: customerEmail,
       subject: "Your Pearl4Nails Appointment Confirmation",
@@ -461,16 +479,16 @@ export async function POST(req: Request) {
   try {
     const appointment = await req.json();
     const success = await sendAppointmentConfirmation(appointment);
-    
+
     return new Response(JSON.stringify({ success }), {
       headers: { "Content-Type": "application/json" },
       status: success ? 200 : 500,
     });
   } catch (error) {
     console.error("Error in email service API:", error);
-    return new Response(JSON.stringify({ 
-      success: false, 
-      error: error instanceof Error ? error.message : "Internal server error" 
+    return new Response(JSON.stringify({
+      success: false,
+      error: error instanceof Error ? error.message : "Internal server error"
     }), {
       headers: { "Content-Type": "application/json" },
       status: 500,

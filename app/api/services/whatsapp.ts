@@ -106,12 +106,16 @@ export const sendWhatsAppNotification = async (bookingDetails: any) => {
       'Email: ' + customerEmail + '\n' +
       'Phone: ' + customerPhone + '\n' +
       (bookingDetails.notes ? 'Notes: ' + bookingDetails.notes + '\n' : '') +
+      // (bookingDetails.serviceNailShape ? '\nNail Shape: ' + bookingDetails.serviceNailShape + '\n' : '') +
+      // (bookingDetails.serviceNailDesign ? '\nNail Design: ' + bookingDetails.serviceNailDesign + '\n' : '') +
       '\nAppointment Details:\n' +
       'Date: ' + formattedDate + '\n' +
       'Time: ' + bookingDetails.time + '\n\n' +
       'Services Booked:\n' +
       servicesInfo + priceDisplay + durationDisplay + totalPriceDisplay +
-      (bookingDetails.referenceImage ? '\nInspo Image: ' + bookingDetails.referenceImage : '');
+      (bookingDetails.nailShape ? '\nNail Shape: ' + bookingDetails.nailShape + '\n' : '') +
+      (bookingDetails.nailDesign ? '\nNail Design: ' + bookingDetails.nailDesign + '\n' : '') +
+      (bookingDetails.referenceImage ? '\nInspo Image: ' + bookingDetails.referenceImage : '')
 
     // Revert to using environment variables
     const phoneNumber = process.env.WHATSAPP_PHONE_NUMBER;

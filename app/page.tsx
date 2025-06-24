@@ -125,11 +125,15 @@ export default function Home() {
     // Combine all images from different categories
     const combined = [...galleryData.nails, ...galleryData.lashes, ...galleryData.makeup]
 
-    // Sort images by id to ensure consistent ordering
-    const sorted = [...combined].sort((a, b) => a.id.localeCompare(b.id))
+    // Shuffle the array for randomness (Fisher-Yates algorithm)
+    const shuffled = [...combined]
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+    }
 
     // Take up to 8 items
-    return sorted.slice(0, 8)
+    return shuffled.slice(0, 8)
   }, [])
 
   // Check if animation should be shown
@@ -325,8 +329,7 @@ export default function Home() {
               <TabsContent value="all" className="mt-0">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {/* Display randomly combined items from all categories */}
-                  {/* Sort images by id to ensure consistent ordering */}
-                  {allImages.sort((a, b) => a.id - b.id).map((item) => (
+                  {allImages.map((item) => (
                     <div key={`all-${item.id}`} className="group relative overflow-hidden rounded-xl aspect-square">
                       <div className="absolute inset-0">
                         <img

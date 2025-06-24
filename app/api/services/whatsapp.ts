@@ -9,55 +9,6 @@ import axios from "axios";
 let lastSentAt = 0;
 let lastBookingId = '';
 
-interface TrainingDetails {
-  fullName: string;
-  email: string;
-  phoneNumber: string;
-  course: 'nail-art' | 'lash-extensions' | 'microblading';
-  duration: '4-weeks' | '3-months' | '6-months' | '1-week' | '2-weeks' | '3-days';
-  equipmentOption: 'provided' | 'self';
-}
-
-export const sendTrainingWhatsAppNotification = async (trainingDetails: TrainingDetails) => {
-  try {
-    const { fullName, course, duration, equipmentOption } = trainingDetails;
-    const courses = {
-      'nail-art': 'Professional Nail Art',
-      'lash-extensions': 'Lash Extension Mastery',
-      'microblading': 'Microblading Certification'
-    };
-    const durations = {
-      '4-weeks': '4 Weeks Course',
-      '3-months': '3 Months Course',
-      '6-months': '6 Months Course',
-      '1-week': '1 Week Course',
-      '2-weeks': '2 Weeks Course',
-      '3-days': '3 Days Course'
-    };
-    const equipmentOptions = {
-      'provided': 'Equipment Provided by Pearl4Nails',
-      'self': 'Student Provides Own Equipment'
-    };
-
-    const message = `🌟 New Training Registration!
-
-Name: ${fullName}
-Course: ${courses[course as keyof typeof courses]}
-Duration: ${durations[duration as keyof typeof durations]}
-Equipment: ${equipmentOptions[equipmentOption as keyof typeof equipmentOptions]}
-
-Thank you for choosing Pearl4Nails! 🌟`;
-
-    // Send message using WhatsApp API
-    // Implementation would depend on your WhatsApp API provider
-    // This is a placeholder - implement actual WhatsApp API call here
-    console.log('Sending WhatsApp notification:', message);
-    return true;
-  } catch (error) {
-    console.error('Error sending WhatsApp notification:', error);
-    return false;
-  }
-};
 
 export const sendWhatsAppNotification = async (bookingDetails: any) => {
 

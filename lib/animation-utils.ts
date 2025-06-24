@@ -1,7 +1,7 @@
 export function hasAnimationExpired(): boolean {
-  // Animation expiration date (1 week from launch)
-  const launchDate = new Date(2025, 4, 12) // May 4, 2025 (month is 0-based)
-  const expirationDate = new Date(launchDate.getTime() + 12 * 24 * 60 * 60 * 1000)
+  // Animation expiration date (1 month from July 1, 2025)
+  const launchDate = new Date(2025, 6, 1) // July 1, 2025 (month is 0-based)
+  const expirationDate = new Date(2025, 7, 1) // August 1, 2025
   return new Date() > expirationDate
 }
 

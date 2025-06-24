@@ -115,7 +115,7 @@ export default function Home() {
   }
 
   // Function for image error handling
-  const handleImageError = (e) => {
+  const handleImageError = (e: any) => {
     e.target.onerror = null // Prevent infinite error loop
     e.target.src = e.target.dataset.fallback
   }
@@ -125,16 +125,23 @@ export default function Home() {
     // Combine all images from different categories
     const combined = [...galleryData.nails, ...galleryData.lashes, ...galleryData.makeup]
 
-    // Shuffle the array for randomness (Fisher-Yates algorithm)
+    // Shuffle the array for randomness (Fisher-Yates algorithm) with consistent seed
     const shuffled = [...combined]
+    // Use a consistent seed for random number generation
+    const seed = 42; // You can change this seed value if you want a different order
+    const random = (max: number) => {
+      const x = Math.sin(seed) * 10000;
+      return (x - Math.floor(x)) * max;
+    };
+
     for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1))
+      const j = Math.floor(random(i + 1));
       ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
     }
 
     // Take up to 8 items
     return shuffled.slice(0, 8)
-  }, [])
+  }, [galleryData])
 
   // Check if animation should be shown
   const [shouldShowAnimation, setShouldShowAnimation] = useState(false)
@@ -499,7 +506,7 @@ export default function Home() {
                 <div key={i} className="group relative overflow-hidden rounded-xl aspect-square">
                   {post.platform === "instagram" ? (
                     <Image
-                      src={post.image}
+                      src={post.image || 'Instagram post'}
                       alt={post.alt}
                       fill={true}
                       className="object-cover transition-transform duration-500 group-hover:scale-110"
@@ -507,10 +514,7 @@ export default function Home() {
                   ) : (
                     <video
                       src={post.video}
-                      alt={post.alt}
-                      // className="object-contain w-full h-full"
                       autoPlay
-                      fill="true"
                       loop
                       muted
                       playsInline

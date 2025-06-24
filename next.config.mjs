@@ -1,16 +1,3 @@
-let userConfig = undefined
-try {
-  // try to import ESM first
-  userConfig = await import('./v0-user-next.config.mjs')
-} catch (e) {
-  try {
-    // fallback to CJS import
-    userConfig = await import("./v0-user-next.config");
-  } catch (innerError) {
-    // ignore error
-  }
-}
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   eslint: {
@@ -22,13 +9,11 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  // Explicitly configure App Router
-  appDir: true,
-  useFileSystemPublicRoutes: false,
-  // Disable Pages Router features
-  pageExtensions: ['tsx'],
-  // Disable experimental features for better compatibility
+  // Remove Pages Router specific options
+  pageExtensions: ['ts', 'tsx', 'js', 'jsx'],
+  // Disable experimental features
   experimental: {
+    // Disable experimental features for better compatibility
     webpackBuildWorker: false,
     parallelServerBuildTraces: false,
     parallelServerCompiles: false,
@@ -49,6 +34,8 @@ const nextConfig = {
     return config;
   },
 }
+
+module.exports = nextConfig
 
 if (userConfig) {
   // ESM imports will have a "default" property

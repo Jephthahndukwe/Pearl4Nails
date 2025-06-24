@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { cancelAppointment } from '@/app/api/services/appointment';
 import { sendCancellationEmail } from '@/app/api/services/email';
 import { sendOwnerCancellationNotification } from '@/app/api/services/owner-email';
+import { sendPushNotification } from '@/app/api/services/fcm';
+import { sendWhatsAppNotification } from '@/app/api/services/whatsapp';
 
 export async function POST(request: Request) {
   try {
@@ -33,19 +35,31 @@ export async function POST(request: Request) {
       );
     };
 
-    // Cancel the appointment
-    const result = await cancelAppointment(appointmentId);
+    // Cancel the appointment and get the full appointment details
+    const { appointment, redirectUrl } = await cancelAppointment(appointmentId);
 
-    // Send cancellation email
-    await sendCancellationEmail(appointmentId);
+    // Send cancellation notifications
+    try {
+      // Send cancellation email
+      await sendCancellationEmail(appointment);
+      
+      // Send owner cancellation notification
+      await sendOwnerCancellationNotification(appointment);
+      
+      // Send FCM notification
+      await sendPushNotification(appointment);
+      
+      // Send WhatsApp notification
+      await sendWhatsAppNotification(appointment);
+    } catch (notificationError) {
+      console.error('Error sending notifications:', notificationError);
+      // Don't fail the cancellation if notifications fail
+    }
 
-    // Send owner cancellation notification email
-    await sendOwnerCancellationNotification(appointmentId);
-
-    // Redirect to cancelled page
+    // Return success response with redirect URL
     return NextResponse.json({
       success: true,
-      redirectUrl: result.redirectUrl
+      redirectUrl
     });
 
   } catch (error) {

@@ -291,7 +291,7 @@ function isValidUUID(id: string): boolean {
 }
 
 // Optimized cancel appointment function
-export async function cancelAppointment(appointmentId: string): Promise<{ success: boolean; redirectUrl: string }> {
+export async function cancelAppointment(appointmentId: string): Promise<{ appointment: any; redirectUrl: string }> {
   try {
     // Validate appointment ID
     if (!appointmentId || typeof appointmentId !== 'string' || 
@@ -302,6 +302,19 @@ export async function cancelAppointment(appointmentId: string): Promise<{ succes
     // Get collection with timeout
     const collection = await getAppointmentCollection();
     
+    // First find the appointment to get its details
+    const appointment = await queryWithTimeout(
+      collection,
+      async () => {
+        return await collection.findOne({ appointmentId: appointmentId });
+      },
+      3000 // 3 second timeout for find
+    );
+
+    if (!appointment) {
+      throw new Error('Appointment not found');
+    }
+
     // Use timeout wrapper for the update operation
     const result = await queryWithTimeout(
       collection,
@@ -326,15 +339,15 @@ export async function cancelAppointment(appointmentId: string): Promise<{ succes
     // Clear cache
     clearTimeSlotCache();
 
-    console.log('✅ Successfully cancelled appointment:', appointmentId);
+    console.log(' Successfully cancelled appointment:', appointmentId);
 
     return {
-      success: true,
+      appointment,
       redirectUrl: '/booking/cancelled'
     };
     
   } catch (error) {
-    console.error('❌ Error cancelling appointment:', error.message);
+    console.error(' Error cancelling appointment:', error.message);
     throw error;
   }
 }

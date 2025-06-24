@@ -22,8 +22,13 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  // Explicitly configure App Router
+  appDir: true,
+  useFileSystemPublicRoutes: false,
+  // Disable Pages Router features
+  pageExtensions: ['tsx'],
+  // Disable experimental features for better compatibility
   experimental: {
-    // Disable experimental features for better compatibility
     webpackBuildWorker: false,
     parallelServerBuildTraces: false,
     parallelServerCompiles: false,

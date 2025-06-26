@@ -57,7 +57,13 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
+      <body 
+        className={inter.className}
+        suppressHydrationWarning
+        data-gr-ext-installed=""
+        data-new-gr-c-s-check-loaded="14.1241.0"
+        cz-shortcut-listen="true"
+      >
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
           <div className="flex flex-col min-h-screen">
             <Header />

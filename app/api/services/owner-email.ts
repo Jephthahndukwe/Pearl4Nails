@@ -121,7 +121,7 @@ export const sendOwnerAppointmentNotification = async (appointment: any) => {
         .map(
           (service: any, index: number) => `
         <div class="details-item">
-          <strong>${index + 1}. Service:</strong> ${service.serviceName} - ${service.serviceTypeName}
+          <strong>${index + 1}. Service:</strong> ${service.serviceName} - ${Array.isArray(service.serviceTypeName) ? service.serviceTypeName.join(', ') : service.serviceTypeName}
         </div>
          ${service.nailShape ? `
             <div class="details-item">
@@ -175,7 +175,7 @@ export const sendOwnerAppointmentNotification = async (appointment: any) => {
       // Single service (legacy format)
       servicesHtml = `
       <div class="details-item">
-        <strong>Service:</strong> ${appointment.serviceTypeName || appointment.serviceName || appointment.service || 'N/A'}
+       <strong>Service:</strong> ${Array.isArray(appointment.serviceTypeName) ? appointment.serviceTypeName.join(', ') : appointment.serviceTypeName || appointment.serviceName || appointment.service || 'N/A'}
       </div>
       ${appointment.nailShape ? `
       <div class="details-item">

@@ -67,7 +67,12 @@ export const sendWhatsAppNotification = async (bookingDetails: any) => {
     if (bookingDetails.services && bookingDetails.services.length > 0) {
       servicesInfo = bookingDetails.services
         .map((service: any, index: number) => {
-          let serviceText = `${index + 1}. ${service.serviceName} - ${service.serviceTypeName}`;
+          // If serviceTypeName is an array, join them with commas
+          const serviceTypeNames = Array.isArray(service.serviceTypeName)
+            ? service.serviceTypeName.join(', ')
+            : service.serviceTypeName;
+          
+          let serviceText = `${index + 1}. ${service.serviceName} - ${serviceTypeNames}`;
           if (service.serviceDuration) serviceText += ` (${service.serviceDuration})`;
           if (service.servicePrice) serviceText += ` - ${service.servicePrice}`;
           return serviceText;

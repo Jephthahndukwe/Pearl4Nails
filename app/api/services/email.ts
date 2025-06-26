@@ -3,12 +3,12 @@ import nodemailer from 'nodemailer';
 // Initialize Nodemailer transporter
 const createTransporter = () => {
   return nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    host: process.env.SMTP_HOST || 'smtp.sendgrid.net',
     port: parseInt(process.env.SMTP_PORT || '587'),
     secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
     auth: {
       user: process.env.EMAIL_FROM,
-      pass: process.env.EMAIL_PASSWORD,
+      pass: process.env.SENDGRID_API_KEY,
     },
     tls: {
       rejectUnauthorized: false
@@ -158,7 +158,7 @@ const generateServicesHtml = (appointment: any): string => {
     servicesHtml = appointment.services
       .map((service: any, index: number) => `
         <div class="details-item">
-          <strong>${index + 1}. Service:</strong> ${service.serviceName} - ${service.serviceTypeName}
+          <strong>${index + 1}. Service:</strong> ${service.serviceName} - ${Array.isArray(service.serviceTypeName) ? service.serviceTypeName.join(', ') : service.serviceTypeName}
         </div>
          ${service.nailShape ? `
               <div class="details-item">
@@ -205,7 +205,7 @@ const generateServicesHtml = (appointment: any): string => {
     // Single service (legacy format)
     servicesHtml = `
       <div class="details-item">
-        <strong>Service:</strong> ${appointment.serviceTypeName || appointment.serviceName || appointment.service}
+        <strong>Service:</strong> ${Array.isArray(appointment.serviceTypeName) ? appointment.serviceTypeName.join(', ') : appointment.serviceTypeName || appointment.serviceName || appointment.service}
       </div>
       ${appointment.nailShape ? `
       <div class="details-item">

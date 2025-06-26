@@ -166,7 +166,7 @@ export default function Home() {
       <main className="flex min-h-screen flex-col">
         {/* Hero Section */}
         <section className="relative min-h-[100vh] flex items-center justify-center overflow-hidden">
-          {shouldShowAnimation && <LaunchCelebration />}
+          {/* {shouldShowAnimation && <LaunchCelebration />} */}
           <div className="absolute inset-0 bg-gradient-to-br from-pink-300 via-pink-400 to-pink-500">
             <div className="absolute inset-0 opacity-20 mix-blend-overlay bg-[url('/images/Nail.jpeg?height=200&width=200')] bg-repeat"></div>
           </div>

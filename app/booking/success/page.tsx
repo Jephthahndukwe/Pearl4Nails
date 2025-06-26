@@ -140,15 +140,20 @@ export default function BookingSuccessPage() {
             const serviceIds = JSON.parse(servicesParam);
             services = serviceIds.map((serviceId: string) => {
               const service = findServiceById(serviceId);
-                const serviceType = findServiceTypeById(serviceId, parsedServiceTypes[serviceId]);
+              const serviceTypeIds = Array.isArray(parsedServiceTypes[serviceId]) 
+                ? parsedServiceTypes[serviceId]
+                : [parsedServiceTypes[serviceId]];
 
-              return {
-                serviceName: service?.name || "Service",
-                serviceTypeName: serviceType?.name || "Type",
-                servicePrice: serviceType?.price || "",
-                serviceDuration: serviceType?.duration || ""
-              };
-            });
+              return serviceTypeIds.map(typeId => {
+                const serviceType = findServiceTypeById(serviceId, typeId);
+                return {
+                  serviceName: service?.name || "Service",
+                  serviceTypeName: serviceType?.name || "Type",
+                  servicePrice: serviceType?.price || "",
+                  serviceDuration: serviceType?.duration || ""
+                };
+              });
+            }).flat();
             hasMultipleServices = services.length > 0;
           } catch (error) {
             console.error("Error parsing services:", error);
@@ -164,6 +169,7 @@ export default function BookingSuccessPage() {
           serviceDuration: searchParams.get("serviceDuration") || undefined,
           services: hasMultipleServices ? services : undefined,
           totalDuration: searchParams.get("totalDuration") || undefined,
+          totalPrice,
           date: searchParams.get("date") || "Date",
           time: searchParams.get("time") || "Time",
           nailShape: searchParams.get("nailShape"),
@@ -177,7 +183,6 @@ export default function BookingSuccessPage() {
             phone: "09160763206",
           },
           preparation,
-          totalPrice,
           appointmentId: searchParams.get("appointmentId") || "AP123456",
         }
 
@@ -350,7 +355,9 @@ export default function BookingSuccessPage() {
           bookingDetails.services
             .map(
               (s, index) =>
-                `${index + 1}. ${s.serviceName} - ${s.serviceTypeName}${s.servicePrice ? ` (${s.servicePrice})` : ""}${s.serviceDuration ? ` (${s.serviceDuration})` : ""}`,
+                `${index + 1}. ${s.serviceName} - ${Array.isArray(s.serviceTypeName) 
+                  ? s.serviceTypeName.join(', ')
+                  : s.serviceTypeName}${s.servicePrice ? ` (${s.servicePrice})` : ""}${s.serviceDuration ? ` (${s.serviceDuration})` : ""}`,
             )
             .join("\n")
 
@@ -437,8 +444,10 @@ export default function BookingSuccessPage() {
           <div className="font-medium">
             <ul className="list-disc pl-5">
               {bookingDetails.services.map((service, index) => (
-                <li key={index}>
-                  {service.serviceName} - {service.serviceTypeName}
+                <li key={`${service.serviceName}-${index}`}>
+                  {service.serviceName} - {Array.isArray(service.serviceTypeName) 
+                    ? service.serviceTypeName.join(', ')
+                    : service.serviceTypeName}
                   {service.servicePrice && ` (${service.servicePrice})`}
                   {service.serviceDuration && ` (${service.serviceDuration})`}
                 </li>

@@ -30,7 +30,7 @@ export const sendPushNotification = async (bookingDetails: any) => {
       servicesInfo = bookingDetails.services
         .map(
           (service: any, index: number) =>
-            `${index + 1}. ${service.serviceName} - ${service.serviceTypeName}${service.serviceDuration ? ` (${service.serviceDuration})` : ""}`,
+            `${index + 1}. ${service.serviceName} - ${Array.isArray(service.serviceTypeName) ? service.serviceTypeName.join(', ') : service.serviceTypeName}${service.serviceDuration ? ` (${service.serviceDuration})` : ""}`
         )
         .join("\n")
 
@@ -40,7 +40,7 @@ export const sendPushNotification = async (bookingDetails: any) => {
     } else {
       // Single service (legacy format)
       const serviceName =
-        bookingDetails.serviceTypeName || bookingDetails.serviceName || bookingDetails.service || "Service"
+        Array.isArray(bookingDetails.serviceTypeName) ? bookingDetails.serviceTypeName.join(', ') : bookingDetails.serviceTypeName || bookingDetails.serviceName || bookingDetails.service || "Service"
       const serviceDuration = bookingDetails.serviceDuration ? ` (${bookingDetails.serviceDuration})` : ""
       servicesInfo = `${serviceName}${serviceDuration}`
 

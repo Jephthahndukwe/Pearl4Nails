@@ -21,7 +21,8 @@ export default function BookingPage() {
 
   // Modified for multiple service selection
   const [selectedServices, setSelectedServices] = useState<string[]>([])
-  const [selectedServiceTypes, setSelectedServiceTypes] = useState<Record<string, string>>({})
+  // Changed to array of selected service types
+  const [selectedServiceTypes, setSelectedServiceTypes] = useState<Record<string, string[]>>({})
   const [totalDuration, setTotalDuration] = useState<number>(0)
   const [totalPrice, setTotalPrice] = useState<{ min: number; max: number }>({ min: 0, max: 0 })
 
@@ -70,70 +71,74 @@ export default function BookingPage() {
   }, [selectedServices, selectedServiceTypes])
 
   // Duration calculation functions
-  const calculateTotalDuration = (services: string[], serviceTypes: Record<string, string>) => {
+  const calculateTotalDuration = (services: string[], serviceTypes: Record<string, string[]>) => {
     let total = 0
 
-    Object.entries(serviceTypes).forEach(([serviceId, typeId]) => {
-      if (services.includes(serviceId)) {
-        const serviceType = findServiceTypeById(serviceId, typeId)
-        if (serviceType) {
-          const durationStr = serviceType.duration
+    Object.entries(serviceTypes).forEach(([serviceId, typeIds]) => {
+      if (services.includes(serviceId) && Array.isArray(typeIds)) {
+        typeIds.forEach(typeId => {
+          const serviceType = findServiceTypeById(serviceId, typeId)
+          if (serviceType) {
+            const durationStr = serviceType.duration
 
-          // Handle various duration formats
-          // Format: "2 h 30 mins" or "1 h 30 min" or "45 min" or "1 h"
-          const hourMatch = durationStr.match(/(\d+)\s*h/)
-          const minuteMatch = durationStr.match(/(\d+)\s*min/)
+            // Handle various duration formats
+            // Format: "2 h 30 mins" or "1 h 30 min" or "45 min" or "1 h"
+            const hourMatch = durationStr.match(/(\d+)\s*h/)
+            const minuteMatch = durationStr.match(/(\d+)\s*min/)
 
-          if (hourMatch) {
-            total += Number.parseInt(hourMatch[1]) * 60 // Convert hours to minutes
+            if (hourMatch) {
+              total += Number.parseInt(hourMatch[1]) * 60 // Convert hours to minutes
+            }
+
+            if (minuteMatch) {
+              total += Number.parseInt(minuteMatch[1])
+            }
           }
-
-          if (minuteMatch) {
-            total += Number.parseInt(minuteMatch[1])
-          }
-        }
+        })
       }
     })
 
     return total // Return total minutes
   }
 
-  const calculateTotalPrice = (services: string[], serviceTypes: Record<string, string>) => {
+  const calculateTotalPrice = (services: string[], serviceTypes: Record<string, string[]>) => {
     let minPrice = 0
     let maxPrice = 0
 
-    Object.entries(serviceTypes).forEach(([serviceId, typeId]) => {
-      if (services.includes(serviceId)) {
-        const serviceType = findServiceTypeById(serviceId, typeId)
-        if (serviceType) {
-          const price = serviceType.price.trim()
+    Object.entries(serviceTypes).forEach(([serviceId, typeIds]) => {
+      if (services.includes(serviceId) && Array.isArray(typeIds)) {
+        typeIds.forEach(typeId => {
+          const serviceType = findServiceTypeById(serviceId, typeId)
+          if (serviceType) {
+            const price = serviceType.price.trim()
 
-          try {
-            // Handle price range format: "₦6,000-₦12,000" or "₦6,000 - ₦12,000"
-            const rangeMatch = price.match(/[₦$]?\s*([\d,]+)\s*-\s*[₦$]?\s*([\d,]+)/);
-            if (rangeMatch) {
-              const min = parseInt(rangeMatch[1].replace(/,/g, ''), 10);
-              const max = parseInt(rangeMatch[2].replace(/,/g, ''), 10);
-              if (!isNaN(min) && !isNaN(max)) {
-                minPrice += min;
-                maxPrice += max;
-                return;
+            try {
+              // Handle price range format: "₦6,000-₦12,000" or "₦6,000 - ₦12,000"
+              const rangeMatch = price.match(/[₦$]?\s*([\d,]+)\s*-\s*[₦$]?\s*([\d,]+)/);
+              if (rangeMatch) {
+                const min = parseInt(rangeMatch[1].replace(/,/g, ''), 10);
+                const max = parseInt(rangeMatch[2].replace(/,/g, ''), 10);
+                if (!isNaN(min) && !isNaN(max)) {
+                  minPrice += min;
+                  maxPrice += max;
+                  return;
+                }
               }
-            }
-            
-            // Handle single price format: "₦6,000" or "₦ 6,000"
-            const singlePriceMatch = price.match(/[₦$]?\s*([\d,]+)/);
-            if (singlePriceMatch) {
-              const amount = parseInt(singlePriceMatch[1].replace(/,/g, ''), 10);
-              if (!isNaN(amount)) {
-                minPrice += amount;
-                maxPrice += amount;
+              
+              // Handle single price format: "₦6,000" or "₦ 6,000"
+              const singlePriceMatch = price.match(/[₦$]?\s*([\d,]+)/);
+              if (singlePriceMatch) {
+                const amount = parseInt(singlePriceMatch[1].replace(/,/g, ''), 10);
+                if (!isNaN(amount)) {
+                  minPrice += amount;
+                  maxPrice += amount;
+                }
               }
+            } catch (error) {
+              console.error('Error parsing price:', price, error);
             }
-          } catch (error) {
-            console.error('Error parsing price:', price, error);
-            }
-        }
+          }
+        })
       }
     })
 
@@ -763,13 +768,25 @@ export default function BookingPage() {
                         <div
                           key={type.id}
                           className={`border rounded-lg p-4 cursor-pointer transition-all ${
-                            selectedServiceTypes[serviceId] === type.id
+                            selectedServiceTypes[serviceId]?.includes(type.id)
                               ? "border-pink-500 bg-pink-50"
                               : "border-gray-200 hover:border-pink-300"
                           }`}
                           onClick={() => {
                             const updatedServiceTypes = { ...selectedServiceTypes }
-                            updatedServiceTypes[serviceId] = type.id
+                            
+                            // Initialize array if it doesn't exist
+                            if (!Array.isArray(updatedServiceTypes[serviceId])) {
+                              updatedServiceTypes[serviceId] = []
+                            }
+                            
+                            const typeIndex = updatedServiceTypes[serviceId].indexOf(type.id)
+                            if (typeIndex === -1) {
+                              updatedServiceTypes[serviceId].push(type.id)
+                            } else {
+                              updatedServiceTypes[serviceId].splice(typeIndex, 1)
+                            }
+                            
                             setSelectedServiceTypes(updatedServiceTypes)
 
                             // Calculate new total duration
@@ -790,12 +807,12 @@ export default function BookingPage() {
                               <p className="font-bold text-pink-500">{type.price}</p>
                               <div
                                 className={`w-5 h-5 rounded-full border ${
-                                  selectedServiceTypes[serviceId] === type.id
+                                  selectedServiceTypes[serviceId]?.includes(type.id)
                                     ? "border-pink-500 bg-pink-500"
                                     : "border-gray-300"
                                 }`}
                               >
-                                {selectedServiceTypes[serviceId] === type.id && (
+                                {selectedServiceTypes[serviceId]?.includes(type.id) && (
                                   <Check className="w-4 h-4 text-white" />
                                 )}
                               </div>

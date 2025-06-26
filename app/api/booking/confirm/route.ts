@@ -5,6 +5,7 @@ import { sendPushNotification } from '../../services/fcm';
 import { sendWhatsAppNotification } from '../../services/whatsapp';
 import { sendOwnerAppointmentNotification } from '../../services/owner-email';
 import { getAppointmentCollection } from '@/app/lib/mongodb';
+import { findServiceTypeById } from '@/types/service';
 import { clearTimeSlotCache } from '../../services/appointment';
 
 export async function POST(req: NextRequest) {
@@ -65,14 +66,20 @@ export async function POST(req: NextRequest) {
       ...appointmentData,
       appointmentId,
       // Map services to the format expected by notification services
-      services: appointmentData.services ? appointmentData.services.map((service: any) => ({
-        serviceName: service.name,
-        serviceTypeName: service.typeName,
-        servicePrice: service.price,
-        serviceDuration: service.duration,
-        // Keep original properties for compatibility
-        ...service
-      })) : [],
+      services: appointmentData.services ? appointmentData.services.flatMap((service: any) => {
+        const serviceTypes = Array.isArray(service.typeId) 
+          ? service.typeId.map((typeId: string) => findServiceTypeById(service.id, typeId))
+          : [findServiceTypeById(service.id, service.typeId)];
+
+        return serviceTypes.map((serviceType: any) => ({
+          serviceName: service.name,
+          serviceTypeName: serviceType?.name || service.typeName,
+          servicePrice: serviceType?.price || service.price,
+          serviceDuration: serviceType?.duration || service.duration,
+          // Keep original properties for compatibility
+          ...service
+        }));
+      }) : [],
       totalDuration: appointmentData.totalDuration || "",
       totalPrice, // Include the parsed total price
       date: formattedDate, // Primary date format (MM/DD/YYYY)
@@ -136,11 +143,11 @@ export async function POST(req: NextRequest) {
         ),
         
         // Send push notification via Pushover
-        sendPushNotification(appointment).then(result => 
-          console.log('Push notification sent:', result ? 'Success' : 'Failed')
-        ).catch(error => 
-          console.error("Failed to send push notification:", error)
-        ),
+        // sendPushNotification(appointment).then(result => 
+        //   console.log('Push notification sent:', result ? 'Success' : 'Failed')
+        // ).catch(error => 
+        //   console.error("Failed to send push notification:", error)
+        // ),
         
         // Send WhatsApp notification via CallMeBot
         sendWhatsAppNotification(appointment).then(result =>

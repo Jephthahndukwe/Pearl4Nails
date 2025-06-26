@@ -3,12 +3,12 @@ import nodemailer from 'nodemailer';
 // Initialize Nodemailer transporter
 const createTransporter = () => {
   return nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp.sendgrid.net',
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
     port: parseInt(process.env.SMTP_PORT || '587'),
     secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
     auth: {
       user: process.env.EMAIL_FROM,
-      pass: process.env.SENDGRID_API_KEY,
+      pass: process.env.EMAIL_PASSWORD,
     },
     tls: {
       rejectUnauthorized: false
@@ -320,7 +320,13 @@ export const sendAppointmentConfirmation = async (appointment: any): Promise<boo
             
             <p>Best regards,<br>The Pearl4Nails Team</p>
 
-            <p style="color: #ff69b4;">This is an automated notification.</p>
+            <p>Follow us on social media for more updates and inspiration!</p>
+            <div style="margin-top: 10px;" display="flex" gap="10px" align-items="center">
+              <p>Instagram: <a href="https://instagram.com/pearl4nails" target="_blank" style="color: #ff69b4; text-decoration: underline;">@pearl4nails</a></p>
+              <p>Tiktok: <a href="https://tiktok.com/@pearl_4_nails" target="_blank" style="color: #ff69b4; text-decoration: underline;">@pearl_4_nails</a></p>
+            </div>
+
+            <p style="color: #ff69b4;">This is an automated email.</p>
           </div>
         </div>
       </body>

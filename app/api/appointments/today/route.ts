@@ -5,13 +5,13 @@ import { getAppointmentCollection } from '@/app/lib/mongodb';
 function formatTimeTo12Hour(time: string): string {
   if (time.includes('AM') || time.includes('PM')) return time;
   const [hours, minutes] = time.split(':');
-  const hour = parseInt(hours);
+  let hour = parseInt(hours);
   const period = hour >= 12 ? 'PM' : 'AM';
-  const formattedHour = hour % 12 || 12;
-  return `${formattedHour}:${minutes} ${period}`;
+  hour = hour % 12 || 12;
+  return `${hour}:${minutes} ${period}`;
 }
 
-// Get today's date formatted like MM/DD/YYYY
+// Today's date formatted as MM/DD/YYYY
 function getTodayFormatted(): string {
   const today = new Date();
   const mm = String(today.getMonth() + 1).padStart(2, '0');
@@ -20,47 +20,79 @@ function getTodayFormatted(): string {
   return `${mm}/${dd}/${yyyy}`;
 }
 
-// Main endpoint
+// Convert time string like "8:30 PM" -> total minutes since midnight
+function timeToMinutes(time: string): number {
+  if (!time) return 0;
+  const [timePart, ampm] = time.split(' ');
+  let [hour, minute] = timePart.split(':').map(Number);
+  if (ampm === 'PM' && hour !== 12) hour += 12;
+  if (ampm === 'AM' && hour === 12) hour = 0;
+  return hour * 60 + minute;
+}
+
+// Main GET endpoint
 export async function GET(request: Request) {
   try {
     const collection = await getAppointmentCollection();
     const todayFormatted = getTodayFormatted();
+    const nowMinutes = new Date().getHours() * 60 + new Date().getMinutes();
 
-    // ✅ Fetch only confirmed appointments for today
-    let appointments = await collection.find({
+    // 1️⃣ Fetch confirmed appointments for today
+    let appointmentsToday = await collection.find({
       date: todayFormatted,
       status: 'confirmed'
     }).toArray();
 
-    let usedDate = todayFormatted;
+    // Filter out appointments where the time has already passed
+    appointmentsToday = appointmentsToday.filter(appt => {
+      const apptMinutes = timeToMinutes(appt.time);
+      return apptMinutes >= nowMinutes;
+    });
 
-    // ✅ If none for today, find the next available confirmed appointment
-    if (appointments.length === 0) {
-      const futureAppointments = await collection
-        .find({
-          date: { $gt: todayFormatted },
-          status: 'confirmed'
-        })
-        .sort({ date: 1 }) // Earliest upcoming first
-        .toArray();
+    if (appointmentsToday.length > 0) {
+      // ✅ If we still have some left today
+      const formatted = appointmentsToday.map(appointment => ({
+        time: formatTimeTo12Hour(appointment.time),
+        name: appointment.customer?.name || appointment.name,
+        phone: appointment.customer?.phone || appointment.phone,
+        service: appointment.services?.[0]?.serviceTypeName || appointment.services?.[0]?.serviceName,
+        date: appointment.date
+      }));
 
-      if (futureAppointments.length > 0) {
-        usedDate = futureAppointments[0].date;
-        appointments = futureAppointments.filter(a => a.date === usedDate);
-      }
+      return NextResponse.json({
+        date: todayFormatted,
+        appointments: formatted
+      });
     }
 
-    // Format and return the result
-    const formatted = appointments.map(appointment => ({
-      time: formatTimeTo12Hour(appointment.time),
-      name: appointment.customer?.name || appointment.name,
-      phone: appointment.customer?.phone || appointment.phone,
-      service: appointment.services?.[0]?.serviceTypeName || appointment.services?.[0]?.serviceName,
-      date: appointment.date
-    }));
+    // 2️⃣ Otherwise, get next future confirmed appointment(s)
+    const futureAppointments = await collection.find({
+      date: { $gt: todayFormatted },
+      status: 'confirmed'
+    }).sort({ date: 1 }).toArray();
 
+    if (futureAppointments.length > 0) {
+      const nextDate = futureAppointments[0].date;
+      const nextAppointments = futureAppointments.filter(a => a.date === nextDate);
+
+      const formatted = nextAppointments.map(appointment => ({
+        time: formatTimeTo12Hour(appointment.time),
+        name: appointment.customer?.name || appointment.name,
+        phone: appointment.customer?.phone || appointment.phone,
+        service: appointment.services?.[0]?.serviceTypeName || appointment.services?.[0]?.serviceName,
+        date: appointment.date
+      }));
+
+      return NextResponse.json({
+        // date: nextDate,
+        appointments: formatted
+      });
+    }
+
+    // 3️⃣ No upcoming appointments at all
     return NextResponse.json({
-      appointments: formatted,
+    //   date: null,
+      appointments: []
     });
 
   } catch (error) {

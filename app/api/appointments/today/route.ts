@@ -45,6 +45,7 @@ export async function GET(request: Request) {
       name: appointment.customer?.name || appointment.name,
       service: appointment.services?.[0]?.serviceTypeName || appointment.services?.[0]?.serviceName,
       price: appointment.totalPrice,
+      time: formatTimeTo12Hour(appointment.time),
       date: appointment.date
     }));
 

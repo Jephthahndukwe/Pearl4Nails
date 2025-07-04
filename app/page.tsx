@@ -452,7 +452,7 @@ export default function Home() {
 
         {/* CTA Section */}
         <section className="py-20 px-4 bg-gradient-to-br from-pink-400 to-pink-600 relative overflow-hidden">
-          <div className="absolute inset-0 opacity-10 mix-blend-overlay bg-[url('/placeholder.svg?height=200&width=200')] bg-repeat"></div>
+          <div className="absolute inset-0 opacity-10 mix-blend-overlay"></div>
 
           <div className="lg:px-4 mx-auto relative z-10">
             <div className="max-w-4xl mx-auto bg-white/10 backdrop-blur-sm rounded-3xl p-8 md:p-12 text-center">

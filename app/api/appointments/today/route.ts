@@ -40,14 +40,21 @@ export async function GET(request: Request) {
     }).sort({ date: 1, time: 1 }).toArray();
 
     // Format output
-    const formatted = appointments.map(appointment => ({
-      duration: appointment.totalDuration,
-      name: appointment.customer?.name || appointment.name,
-      service: appointment.services?.[0]?.serviceTypeName || appointment.services?.[0]?.serviceName,
-      price: appointment.totalPrice,
-      time: formatTimeTo12Hour(appointment.time),
-      date: appointment.date
-    }));
+    const formatted = appointments.map(appointment => {
+      const serviceList = (appointment.services || [])
+        .map((s: any) => s.serviceTypeName || s.serviceName)
+        .filter(Boolean)
+        .join(', ');
+    
+      return {
+        duration: appointment.totalDuration,
+        name: appointment.customer?.name || appointment.name,
+        services: serviceList,
+        price: appointment.totalPrice,
+        time: formatTimeTo12Hour(appointment.time),
+        date: appointment.date
+      };
+    });
 
     return NextResponse.json({ appointments: formatted });
 

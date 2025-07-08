@@ -81,8 +81,8 @@ export default function ContactPage() {
                   <div className="aspect-[4/3]">
                     <iframe
                       src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3963.847547083834!2d3.2963202756801!3d6.5409280229591324!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x103b8feba9a9913d%3A0x4c26f1b0029c13dc!2sMunchiba%20Tech!5e0!3m2!1sen!2sng!4v1750617175857!5m2!1sen!2sng"
-                      width="600"
-                      height="450"
+                      width="100%"
+                      height="100%"
                       style={{ border: 0 }}
                       allowFullScreen
                       loading="lazy"

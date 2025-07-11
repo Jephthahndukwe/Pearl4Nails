@@ -136,7 +136,7 @@ export const serviceCategories: ServiceCategory[] = [
         name: "CLASSIC SET",
         description: "A natural-looking lash extension where one extension is applied to each natural lash. Perfect for everyday elegance.",
         duration: "2 h",
-        price: "₦10,000"
+        price: "₦12,000"
       },
       {
         id: "hybrid-set-lash",
@@ -167,25 +167,25 @@ export const serviceCategories: ServiceCategory[] = [
         price: "₦4,000"
       },
       {
-        id: "under-eye-lash",
-        name: "UNDER EYE LASH",
+        id: "bottom-eye-lash",
+        name: "BOTTOM EYE LASH",
         description: "Soft and subtle lower lash extensions to complete your lash look. Enhances the eyes beautifully.",
         duration: "15 min",
-        price: "₦4,000"
+        price: "₦5,000"
       },
       {
         id: "lash-removal",
         name: "LASH REMOVAL",
         description: "Professional and gentle removal of lash extensions to protect your natural lashes.",
         duration: "10 min",
-        price: "₦3,000"
+        price: "₦4,000"
       },
       {
         id: "lash-refill",
         name: "LASH REFILL (60%)",
         description: "For clients with 60% of their lash extensions remaining. Fills in gaps and maintains your lash look.",
         duration: "1 h 30 min",
-        price: "60% of the original lash set price"
+        price: ""
       }
       
       // Add more lash extension types here

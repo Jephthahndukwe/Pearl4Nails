@@ -81,7 +81,7 @@ export const serviceCategories: ServiceCategory[] = [
         name: "ACRYLIC SET REFILL & DESIGN CHANGE",
         description: "For existing acrylic sets to change the color without taking the whole set off. (60% of the initial price of the nails set)",
         duration: "1 h 30 min",
-        price: "60% of the initial nails set price"
+        price: ""
       },
       {
         id: "acrylic-toes",

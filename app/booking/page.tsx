@@ -225,8 +225,11 @@ export default function BookingPage() {
         // Show loading state
         setTimeSlotsError(null)
 
+        // Format date as YYYY-MM-DD to avoid timezone issues
+        const formattedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        
         // Simple fetch with no race conditions or timeouts
-        const response = await fetch(`/api/booking/available-time-slots?date=${date.toISOString()}&_=${Date.now()}`, {
+        const response = await fetch(`/api/booking/available-time-slots?date=${formattedDate}&_=${Date.now()}`, {
           method: "GET",
           cache: "no-store",
           // Force network request to prevent browser caching

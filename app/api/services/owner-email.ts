@@ -204,14 +204,20 @@ export const sendOwnerAppointmentNotification = async (appointment: any) => {
     `;
     }
 
-    // Format the date
-    const appointmentDate = new Date(appointment.date)
+    // Parse the ISO date (YYYY-MM-DD)
+    const [year, month, day] = appointment.date.split('-').map(Number);
+    const appointmentDate = new Date(year, month - 1, day);
+    
+    // Use displayDate if available, otherwise format from ISO date
+    const displayDate = appointment.displayDate || 
+      `${String(month).padStart(2, '0')}/${String(day).padStart(2, '0')}/${year}`;
+      
     const formattedDate = appointmentDate.toLocaleDateString('en-US', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
       day: 'numeric',
-    })
+    });
 
     // Create email HTML
     const emailHtml = `

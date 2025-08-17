@@ -22,7 +22,7 @@ export default function BookingPage() {
   // Modified for multiple service selection
   const [selectedServices, setSelectedServices] = useState<string[]>([])
   // Changed to array of selected service types
-  const [selectedServiceTypes, setSelectedServiceTypes] = useState<Record<string, string[]>>({})
+  const [selectedServiceTypes, setSelectedServiceTypes] = useState<Record<string, string | string[]>>({})
   const [totalDuration, setTotalDuration] = useState<number>(0)
   const [totalPrice, setTotalPrice] = useState<{ min: number; max: number }>({ min: 0, max: 0 })
 
@@ -159,24 +159,30 @@ export default function BookingPage() {
   }
 
   const getBlockedTimeSlots = (startTime: string, durationMinutes: number) => {
-    const [hourStr, minuteStr, period] = startTime.match(/(\d+):(\d+)\s*(AM|PM)/).slice(1)
+    const timeMatch = startTime.match(/(\d+):(\d+)\s*(AM|PM)/i);
+    if (!timeMatch) return [];
+    
+    const [_, hourStr, minuteStr, period] = timeMatch;
     let hour = Number.parseInt(hourStr)
     const minute = Number.parseInt(minuteStr)
 
-    if (period === "PM" && hour < 12) hour += 12
-    if (period === "AM" && hour === 12) hour = 0
+    if (period?.toUpperCase() === "PM" && hour < 12) hour += 12
+    if (period?.toUpperCase() === "AM" && hour === 12) hour = 0
 
     const startMinutes = hour * 60 + minute
     const endMinutes = startMinutes + durationMinutes
 
     return availableTimeSlots
       .filter((slot) => {
-        const [slotHourStr, slotMinuteStr, slotPeriod] = slot.time.match(/(\d+):(\d+)\s*(AM|PM)/).slice(1)
+        const slotMatch = slot.time.match(/(\d+):(\d+)\s*(AM|PM)/i);
+        if (!slotMatch) return false;
+        
+        const [_, slotHourStr, slotMinuteStr, slotPeriod] = slotMatch;
         let slotHour = Number.parseInt(slotHourStr)
         const slotMinute = Number.parseInt(slotMinuteStr)
 
-        if (slotPeriod === "PM" && slotHour < 12) slotHour += 12
-        if (slotPeriod === "AM" && slotHour === 12) slotHour = 0
+        if (slotPeriod?.toUpperCase() === "PM" && slotHour < 12) slotHour += 12
+        if (slotPeriod?.toUpperCase() === "AM" && slotHour === 12) slotHour = 0
 
         const slotMinutes = slotHour * 60 + slotMinute
         return slotMinutes > startMinutes && slotMinutes < endMinutes
@@ -293,21 +299,28 @@ export default function BookingPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          services: selectedServices.map((serviceId) => ({
-            id: serviceId,
-            name: findServiceById(serviceId)?.name || "",
-            typeId: selectedServiceTypes[serviceId],
-            typeName: findServiceTypeById(serviceId, selectedServiceTypes[serviceId])?.name || "",
-            price: findServiceTypeById(serviceId, selectedServiceTypes[serviceId])?.price || "",
-            duration: findServiceTypeById(serviceId, selectedServiceTypes[serviceId])?.duration || "",
-          })),
+          services: selectedServices.map((serviceId) => {
+            const serviceTypeId = Array.isArray(selectedServiceTypes[serviceId]) 
+              ? selectedServiceTypes[serviceId][0] 
+              : selectedServiceTypes[serviceId] || '';
+            const service = findServiceById(serviceId);
+            const serviceType = serviceTypeId ? findServiceTypeById(serviceId, serviceTypeId) : null;
+            
+            return {
+              id: serviceId,
+              name: service?.name || "",
+              typeId: serviceTypeId,
+              typeName: serviceType?.name || "",
+              price: serviceType?.price || "",
+              duration: serviceType?.duration || "",
+            };
+          }),
           totalDuration: formatDuration(totalDuration),
           totalPrice: totalPrice,
-          date: date?.toLocaleDateString("en-US", {
-            year: "numeric",
-            month: "2-digit",
-            day: "2-digit",
-          }),
+          // Format date as MM/DD/YYYY for display and YYYY-MM-DD for storage
+          date: date ? `${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')}/${date.getFullYear()}` : "",
+          displayDate: date ? `${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')}/${date.getFullYear()}` : "",
+          isoDate: date ? date.toISOString().split('T')[0] : "",
           time: selectedTime,
           name: customerName,
           email: customerEmail,
@@ -337,20 +350,30 @@ export default function BookingPage() {
       // Include service details for the first service (legacy support)
       if (selectedServices.length > 0) {
         const firstService = selectedServices[0];
-        const firstServiceType = selectedServiceTypes[firstService];
-        const serviceType = findServiceTypeById(firstService, firstServiceType);
-        
-        if (serviceType) {
-          url.searchParams.set("service", firstService);
-          url.searchParams.set("serviceType", firstServiceType);
-          url.searchParams.set("serviceName", findServiceById(firstService)?.name || "");
-          url.searchParams.set("serviceTypeName", serviceType.name || "");
-          url.searchParams.set("servicePrice", serviceType.price || "");
-          url.searchParams.set("serviceDuration", serviceType.duration || "");
+        const firstServiceType = Array.isArray(selectedServiceTypes[firstService])
+          ? selectedServiceTypes[firstService][0]
+          : selectedServiceTypes[firstService] || '';
+          
+        if (firstServiceType) {
+          const serviceType = findServiceTypeById(firstService, firstServiceType);
+          const service = findServiceById(firstService);
+          
+          if (serviceType && service) {
+            url.searchParams.set("service", firstService);
+            url.searchParams.set("serviceType", firstServiceType);
+            url.searchParams.set("serviceName", service.name || "");
+            url.searchParams.set("serviceTypeName", serviceType.name || "");
+            url.searchParams.set("servicePrice", serviceType.price || "");
+            url.searchParams.set("serviceDuration", serviceType.duration || "");
+          }
         }
       }
       
-      url.searchParams.set("date", date?.toLocaleDateString())
+      // Include both ISO date for consistent parsing and displayDate for UI
+      const displayDate = date ? `${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')}/${date.getFullYear()}` : "";
+      const isoDate = date ? date.toISOString().split('T')[0] : "";
+      url.searchParams.set("date", isoDate)
+      url.searchParams.set("displayDate", displayDate)
       url.searchParams.set("time", selectedTime)
       url.searchParams.set("totalDuration", formatDuration(totalDuration))
       url.searchParams.set("totalPrice", JSON.stringify(totalPrice))

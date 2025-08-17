@@ -17,30 +17,29 @@ export async function POST(req: NextRequest) {
     }
 
     const appointmentId = uuidv4();
-    // Parse the input date string (assuming format MM/DD/YYYY)
-    const [month, day, year] = appointmentData.date.split('/').map(Number);
+    const appointmentDate = new Date(appointmentData.date);
+
+    // Format the date into various formats for searching and display
+    const year = appointmentDate.getFullYear();
+    const month = String(appointmentDate.getMonth() + 1).padStart(2, '0');
+    const day = String(appointmentDate.getDate()).padStart(2, '0');
     
-    // Create a date object in the local timezone
-    const appointmentDate = new Date(year, month - 1, day);
-    
-    // Format dates consistently
-    const isoDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`; // YYYY-MM-DD
-    const formattedDate = `${String(month).padStart(2, '0')}/${String(day).padStart(2, '0')}/${year}`; // MM/DD/YYYY
-    
-    // For backward compatibility
     const dateFormats = {
-      YYYYMMDD: `${year}${String(month).padStart(2, '0')}${String(day).padStart(2, '0')}`,
-      MMDDYYYY: `${String(month).padStart(2, '0')}${String(day).padStart(2, '0')}${year}`,
-      DDMMYYYY: `${String(day).padStart(2, '0')}${String(month).padStart(2, '0')}${year}`,
+      YYYYMMDD: `${year}${month}${day}`, // YYYYMMDD
+      MMDDYYYY: `${month}${day}${year}`, // MMDDYYYY
+      DDMMYYYY: `${day}${month}${year}`, // DDMMYYYY
     };
     
     console.log('Formatted dates:', {
-      inputDate: appointmentData.date,
-      isoDate,
-      formattedDate,
+      year,
+      month,
+      day,
       dateFormats,
+      isoString: appointmentDate.toISOString(),
       localString: appointmentDate.toString()
     });
+
+    const formattedDate = `${String(appointmentDate.getMonth() + 1).padStart(2, '0')}/${String(appointmentDate.getDate()).padStart(2, '0')}/${appointmentDate.getFullYear()}`;
 
     // Parse total price from the request if available
     let totalPrice = { min: 0, max: 0 };
@@ -83,9 +82,8 @@ export async function POST(req: NextRequest) {
       }) : [],
       totalDuration: appointmentData.totalDuration || "",
       totalPrice, // Include the parsed total price
-      date: isoDate, // Primary date in ISO format (YYYY-MM-DD)
-      displayDate: formattedDate, // Display date in MM/DD/YYYY format
-      dateFormats: dateFormats, // Store all formats for backward compatibility
+      date: formattedDate, // Primary date format (MM/DD/YYYY)
+      dateFormats: dateFormats, // Store all formats to ensure we can find it later
       status: "confirmed",
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),

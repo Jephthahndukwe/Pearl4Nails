@@ -306,15 +306,8 @@ export default function BookingSuccessPage() {
       if (minutesMatch) durationMinutes += parseInt(minutesMatch?.[1] || '0');
       if (durationMinutes === 0) durationMinutes = 60; // Default to 1 hour if duration is 0
 
-      // Parse date in YYYY-MM-DD format (new) or M/D/YYYY format (legacy)
-      let year, month, day;
-      if (bookingDetails.date.includes('-')) {
-        // New format: YYYY-MM-DD
-        [year, month, day] = bookingDetails.date.split('-').map(Number);
-      } else {
-        // Legacy format: M/D/YYYY
-        [month, day, year] = bookingDetails.date.split('/').map(Number);
-      }
+      // Parse date in M/D/YYYY format
+      const [month, day, year] = bookingDetails.date.split('/').map(Number);
       // Create date in local timezone
       const startDate = new Date(year, month - 1, day);
       
@@ -381,12 +374,7 @@ export default function BookingSuccessPage() {
         servicesText = `Service: ${bookingDetails.serviceTypeName || bookingDetails.serviceName || bookingDetails.service}${bookingDetails.servicePrice ? `\nPrice: ${bookingDetails.servicePrice}` : ""}${bookingDetails.serviceDuration ? `\nDuration: ${bookingDetails.serviceDuration}` : ""}`
       }
 
-      // Format date for display (convert from YYYY-MM-DD to MM/DD/YYYY if needed)
-      const displayDate = bookingDetails.date.includes('-') 
-        ? bookingDetails.date.split('-').slice(1).join('/') + '/' + bookingDetails.date.split('-')[0]
-        : bookingDetails.date;
-      
-      const text = `I have an appointment at Pearl4Nails!\n\n${servicesText}\nDate: ${displayDate}\nTime: ${bookingDetails.time}\nLocation: ${bookingDetails.location}\n\nLooking forward to it! 🎉`
+      const text = `I have an appointment at Pearl4Nails!\n\n${servicesText}\nDate: ${bookingDetails.date}\nTime: ${bookingDetails.time}\nLocation: ${bookingDetails.location}\n\nLooking forward to it! 🎉`
 
       if (navigator.share) {
         await navigator.share({

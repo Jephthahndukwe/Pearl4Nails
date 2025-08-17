@@ -14,7 +14,8 @@ export async function getAvailableTimeSlots(searchDate: string): Promise<{ time:
     const day = String(dateParamObj.getDate()).padStart(2, "0")
     const month = String(dateParamObj.getMonth() + 1).padStart(2, "0")
     const year = dateParamObj.getFullYear()
-    const formattedDate = `${month}/${day}/${year}`
+    // Use YYYY-MM-DD format to match database storage
+    const formattedDate = `${year}-${month}-${day}`
 
     // Check cache first (implement simple in-memory cache)
     const cacheKey = `timeslots_${formattedDate}`
@@ -33,21 +34,22 @@ export async function getAvailableTimeSlots(searchDate: string): Promise<{ time:
     try {
       collection = await getAppointmentCollection();
     } catch (dbError) {
-      console.error("❌ Failed to connect to appointment collection:", dbError.message);
+      const errorMessage = dbError instanceof Error ? dbError.message : 'Unknown database error';
+      console.error("❌ Failed to connect to appointment collection:", errorMessage);
       return getDefaultTimeSlots();
     }
 
     console.log("✅ Successfully connected to MongoDB")
 
-    // Build comprehensive query for date matching
-    const [monthStr, dayStr, yearStr] = formattedDate.split('/');
-    const monthNum = parseInt(monthStr, 10);
-    const dayNum = parseInt(dayStr, 10);
-    const yearNum = parseInt(yearStr, 10);
+    // Build comprehensive query for date matching using YYYY-MM-DD format
+    const [yearStr, monthStr, dayStr] = formattedDate.split('-')
+    const yearNum = parseInt(yearStr, 10)
+    const monthNum = parseInt(monthStr, 10) - 1 // JavaScript months are 0-indexed
+    const dayNum = parseInt(dayStr, 10)
     
     // Create date range for UTC queries
-    const startOfDay = new Date(Date.UTC(yearNum, monthNum - 1, dayNum, 0, 0, 0));
-    const endOfDay = new Date(Date.UTC(yearNum, monthNum - 1, dayNum, 23, 59, 59, 999));
+    const startOfDay = new Date(Date.UTC(yearNum, monthNum, dayNum, 0, 0, 0));
+    const endOfDay = new Date(Date.UTC(yearNum, monthNum, dayNum, 23, 59, 59, 999));
     
     // Generate all possible date formats for comprehensive matching
     const dateFormats = {
@@ -117,10 +119,11 @@ export async function getAvailableTimeSlots(searchDate: string): Promise<{ time:
       }
       
     } catch (queryError) {
-      console.error("❌ Query execution failed:", queryError.message);
+      const errorMessage = queryError instanceof Error ? queryError.message : 'Unknown query error';
+      console.error('❌ Database query error:', errorMessage);
       
       // If it's a timeout, we want to know
-      if (queryError.message.includes('timeout')) {
+      if (errorMessage.includes('timeout')) {
         console.error('⏰ Database query timed out - returning default slots');
       }
       
@@ -140,15 +143,15 @@ export async function getAvailableTimeSlots(searchDate: string): Promise<{ time:
     return availableTimeSlots;
 
   } catch (error: unknown) {
-    const err = error as Error
-    console.error(`❌ Error in getAvailableTimeSlots:`, err.message)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('❌ Error in getAvailableTimeSlots:', errorMessage);
     
     // Log additional context in production
     if (process.env.NODE_ENV === "production") {
       console.error("🔍 Production error details:", {
-        errorName: err.name,
-        errorMessage: err.message,
-        stack: err.stack?.split('\n').slice(0, 3).join('\n'), // First 3 lines of stack
+        errorName: error instanceof Error ? error.name : 'Unknown',
+        errorMessage: errorMessage,
+        stack: error instanceof Error ? error.stack?.split('\n').slice(0, 3).join('\n') : 'Unknown', // First 3 lines of stack
         timestamp: new Date().toISOString()
       })
     }
@@ -347,7 +350,8 @@ export async function cancelAppointment(appointmentId: string): Promise<{ appoin
     };
     
   } catch (error) {
-    console.error(' Error cancelling appointment:', error.message);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('❌ Error in cancelAppointment:', errorMessage);
     throw error;
   }
 }

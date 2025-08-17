@@ -296,7 +296,7 @@ export const sendAppointmentConfirmation = async (appointment: any): Promise<boo
               <h3 style="color: #ff69b4; margin: 0 0 15px 0; font-size: 18px;">Appointment Details</h3>
               ${servicesHtml}
               <div class="details-item">
-                <strong>Date:</strong> ${appointment.displayDate || appointment.date}
+                <strong>Date:</strong> ${appointment.date}
               </div>
               <div class="details-item">
                 <strong>Time:</strong> ${appointment.time}
@@ -378,7 +378,7 @@ export const sendCancellationEmail = async (appointment: any): Promise<boolean> 
               <h3 style="color: #ff69b4; margin: 0 0 15px 0; font-size: 18px;">Cancelled Appointment Details</h3>
               ${servicesHtml}
               <div class="details-item">
-                <strong>Date:</strong> ${appointment.displayDate || appointment.date}
+                <strong>Date:</strong> ${appointment.date}
               </div>
               <div class="details-item">
                 <strong>Time:</strong> ${appointment.time}
